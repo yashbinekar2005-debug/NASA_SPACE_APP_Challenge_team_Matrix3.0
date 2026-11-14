@@ -1,0 +1,11 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+.vscode/
+.idea/
+
+# Dependencies (not used by the static site, kept for future tooling)
+node_modules/
+package-lock.json

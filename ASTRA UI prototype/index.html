@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Analog Finder · ASTRA</title>
+  <meta name="description" content="Interactive prototype that ranks Earth analog test sites against Moon and Mars exploration targets, with weighted similarity scoring, 3D globes and a side-by-side comparison.">
+  <meta name="theme-color" content="#0B0F19">
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+  <!-- Theme tokens, base styles and components are imported from here. -->
+  <link rel="stylesheet" href="css/index.css">
+</head>
+<body>
+  <div id="app" class="wrap mode-moon">
+    <header class="top">
+      <div class="brand">
+        <svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true">
+          <circle cx="19" cy="19" r="17" fill="none" stroke="#34D399" stroke-opacity=".5"/>
+          <ellipse cx="19" cy="19" rx="17" ry="7" fill="none" stroke="#38BDF8" stroke-opacity=".6" transform="rotate(-24 19 19)"/>
+          <circle cx="19" cy="19" r="5" fill="#34D399"/>
+          <circle cx="31.5" cy="11" r="2.6" fill="#38BDF8"/>
+        </svg>
+        <div>
+          <h1>Analog Finder</h1>
+          <p>Earth test sites that stand in for Moon and Mars bases</p>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist" aria-label="Screens">
+        <button role="tab" id="tabExplore" aria-selected="true">Explore</button>
+        <button role="tab" id="tabCompare" aria-selected="false">Compare</button>
+      </nav>
+
+      <span class="pill">Prototype · sample data</span>
+    </header>
+
+    <main id="viewExplore" class="explore">
+      <section class="panel p-targets" aria-label="Space target">
+        <span class="eyebrow">Step 1 · Space target</span>
+        <div class="seg" id="modeSeg" role="group" aria-label="Body">
+          <button type="button" data-mode="moon" aria-pressed="true">Moon</button>
+          <button type="button" data-mode="mars" aria-pressed="false">Mars</button>
+        </div>
+        <div class="targets" id="targetList"></div>
+      </section>
+
+      <section class="panel p-prio" aria-label="Priorities">
+        <span class="eyebrow">Step 2 · What matters most</span>
+        <div class="presets" id="presets"></div>
+        <div id="sliders"></div>
+        <p class="legend-note">Indexes run from 0 (none) to 100 (very strong).</p>
+      </section>
+
+      <section class="panel stage" aria-label="Earth and target globes">
+        <div class="canvasbox" id="canvasbox">
+          <canvas id="cvEarth" aria-label="Rotating Earth globe" role="img"></canvas>
+          <canvas id="cvOther" aria-label="Rotating Moon or Mars globe" role="img"></canvas>
+          <canvas id="overlay" aria-hidden="true"></canvas>
+          <span class="hint">Drag a globe to rotate · click a pin to select</span>
+        </div>
+        <div class="pairbar">
+          <div class="pair-names">
+            <span class="eyebrow">Selected pair</span>
+            <p id="pairNames"></p>
+          </div>
+          <div class="ring" id="pairRing"><span id="pairScore">0%</span></div>
+          <button type="button" class="cta" id="openCompare">Compare side by side</button>
+        </div>
+      </section>
+
+      <section class="panel p-results" aria-label="Ranked Earth matches">
+        <span class="eyebrow">Step 3 · Best Earth matches</span>
+        <h2 id="resTitle">Ranked sites</h2>
+        <ol id="resultList"></ol>
+        <p class="fp-key">Small bars show how well each factor matches, left to right: temperature, ice, soil, terrain, dryness, lava tube.</p>
+        <details class="how">
+          <summary>How the score works</summary>
+          <ul>
+            <li>Each factor becomes a bounded distance between 0 and 1, using a documented cap.</li>
+            <li>Temperature uses a 200 °C cap; the 0–100 factors use their own 100-point scale.</li>
+            <li>Similarity = 100 × (1 − weighted mean distance). Your sliders set the weights.</li>
+            <li>Missing or non-comparable factors are excluded and the remaining weights are renormalised; coverage is reported separately.</li>
+            <li>Lava-tube access is only counted when the selected target has a mapped tube or pit.</li>
+            <li>Confidence combines coverage, documentation quality and cross-body comparability. It is not the same thing as similarity.</li>
+            <li>Earth's gravity, air and magnetic field are not modeled. No site can match them.</li>
+          </ul>
+        </details>
+      </section>
+    </main>
+
+    <main id="viewCompare" hidden></main>
+
+    <p class="foot">
+      All numbers here are illustrative placeholders for a design prototype. Before use, replace them with real
+      datasets such as LOLA (Moon), HiRISE and MOLA (Mars) and USGS (Earth). Terrain previews are generated
+      shapes, not real elevation data.
+    </p>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

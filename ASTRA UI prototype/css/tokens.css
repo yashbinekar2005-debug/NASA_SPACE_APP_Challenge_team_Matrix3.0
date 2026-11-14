@@ -1,0 +1,42 @@
+/* ------------------------------------------------------------------
+   Design tokens — the single source of truth for colour and type.
+   Change the palette here and every component follows.
+   ------------------------------------------------------------------ */
+:root{
+  /* Surfaces */
+  --bg:#0B0F19;
+  --panel:#121827;
+  --card:#151C2C;
+  --card-2:#1A2338;
+
+  /* Borders */
+  --line:rgba(148,163,184,.14);
+  --line-strong:rgba(148,163,184,.3);
+
+  /* Text */
+  --fg:#E6EAF2;
+  --muted:#9AA7BE;
+  --faint:#66738E;
+
+  /* Body / semantic colours */
+  --moon:#38BDF8;
+  --mars:#F97316;
+  --earth:#34D399;
+  --warn:#FBBF24;
+  --bad:#F87171;
+
+  /* Live accent, swapped by the body mode classes below */
+  --accent:var(--moon);
+
+  /* Type */
+  --font-display:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+
+  color-scheme:dark;
+}
+
+/* One class on #app switches the accent used by tags, arcs,
+   sliders, focus rings and the primary call to action. */
+#app.mode-moon{--accent:var(--moon)}
+#app.mode-mars{--accent:var(--mars)}

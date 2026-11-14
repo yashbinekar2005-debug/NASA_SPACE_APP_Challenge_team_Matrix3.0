@@ -137,4 +137,33 @@ The final score will be calculated using normalized feature distances:
 Similarity = 100(1-D_{normalized})
 \]
 
-The normalized distance will be bounded between
+The normalized distance will be bounded between 0 and 1.
+
+**Implementation note:** the first working baseline follows the more detailed
+`plan.md` specification and uses a weighted mean of bounded per-feature
+distances, not a raw Euclidean distance over unfiltered values:
+
+\[
+d_i = \min\left(1,\frac{|x_i-y_i|}{cap_i}\right), \qquad
+D_j = \frac{\sum_i w_i d_{ij}}{\sum_i w_i}, \qquad
+Similarity_j = 100(1-D_j)
+\]
+
+Only valid, comparable features contribute. Missing measurements are excluded
+and the remaining weights are renormalised; coverage and confidence are reported
+separately from similarity. Temperature, evidence-class and quantile-distribution
+distances are supported.
+
+The baseline is implemented in the ASTRA prototype:
+
+- **Engine:** `ASTRA UI prototype/js/core/algorithm/`
+- **UI facade:** `ASTRA UI prototype/js/core/scoring.js`
+- **Specification:** `docs/algorithm.md`
+- **Data dictionary:** `docs/data_dictionary.md`
+- **Tests:** `node --test tests/algorithm.test.mjs` (run inside
+  `ASTRA UI prototype/`)
+
+The UI contract (`score`, `tier`, `rankAnalogs`, `{ total, parts }`) is
+preserved. Results additionally expose coverage, confidence, profile scores,
+per-feature distances, warnings, explanations, engine/config versions and a
+reproducible run fingerprint.
