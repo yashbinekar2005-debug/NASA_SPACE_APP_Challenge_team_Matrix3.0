@@ -121,6 +121,13 @@ export function buildWarnings({
     );
   }
 
+  if (target?.measurements?.source?.evidenceType === 'modelled_climatology') {
+    warnings.push(
+      'Mars climate values are modelled climatology, not direct in-situ observations. ' +
+      'Seasonal spread is reported separately and is not a statistical model-error estimate.'
+    );
+  }
+
   const proxies = parts.filter(
     (part) => part.valid && part.f.evidenceType === 'proxy'
   );

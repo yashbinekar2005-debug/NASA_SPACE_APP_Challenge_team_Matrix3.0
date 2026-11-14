@@ -7,11 +7,14 @@ import { PRESETS, targetOf } from '../data/index.js';
  */
 export const state = {
   mode: 'moon',
-  targetId: 'shackleton',
+  // The user must choose a supported measured target; never preselect a site.
+  targetId: null,
+  customTarget: null,
+  customEarthPoint: null,
   analogId: null,
   weights: Object.assign({}, PRESETS[0].w),
   view: 'explore',
   ranked: []
 };
 
-export const curTarget = () => targetOf(state.targetId);
+export const curTarget = () => state.customTarget || targetOf(state.targetId);

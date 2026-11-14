@@ -26,6 +26,8 @@ import {
   coverageOf
 } from './confidence.js';
 import { buildExplanation, buildWarnings, driverList } from './explain.js';
+import { propagateUncertainty, certaintyLabel } from './uncertainty.js';
+import { nonReplicableFor } from '../../data/planetary.js';
 
 /**
  * Multi-criteria planetary analog similarity engine — version 1.
@@ -100,6 +102,7 @@ export function score(target, analog, weights, options = {}) {
   });
 
   const confidence = confidenceOf({ coverage, target, analog, parts });
+  const uncertainty = propagateUncertainty(parts);
   const profiles = computeProfiles(parts, target, analog, {
     minCoverage,
     minFeatures
@@ -144,6 +147,11 @@ export function score(target, analog, weights, options = {}) {
     coverage: round(coverage, 4),
     confidence,
     confidenceLabel: confidenceLabel(confidence),
+    certainty: uncertainty.certainty,
+    certaintyLabel: uncertainty.certaintyLabel,
+    uncertainty,
+    scoreInterval: uncertainty.interval95,
+    nonReplicable: nonReplicableFor(target?.body),
     status,
     insufficientData: status !== 'ok',
     weights: resolvedWeights,
@@ -203,12 +211,17 @@ export function runSimilarity({
     earth_region_name: result.analog?.name ?? null,
     earth_region: result.analog?.region ?? null,
     similarity: round(result.total, 1),
+    score_interval_95: result.scoreInterval,
+    score_sigma: result.uncertainty.sigma,
+    certainty: result.certainty,
+    certainty_label: result.certaintyLabel,
     data_coverage: result.coverage,
     confidence: result.confidence,
     confidence_label: result.confidenceLabel,
     status: result.status,
     matched_features: result.matchedFeatures,
     excluded_features: result.excludedFeatures,
+    non_replicable: result.nonReplicable,
     explanation: result.explanation,
     profiles: result.profiles,
     feature_contributions: result.parts.map((part) => ({
@@ -222,6 +235,7 @@ export function runSimilarity({
       weight: part.wt,
       weight_share: part.weightShare,
       distance_share: part.contribution,
+      uncertainty_sigma_points: result.uncertainty.perFeature[part.f.k]?.sigma_points ?? null,
       comparability: part.comparability,
       evidence_class: {
         target: part.evidenceClassTarget,
@@ -239,6 +253,7 @@ export function runSimilarity({
     target_body: target.body ?? null,
     target_region_id: target.id ?? null,
     target_name: target.name ?? null,
+    non_replicable_differences: nonReplicableFor(target.body),
     profile: effectiveProfile,
     engine_version: ENGINE_VERSION,
     config_version: CONFIG_VERSION,
@@ -401,8 +416,13 @@ function buildPart({
     reason,
     note,
     comparability: feature.comparability,
+    evidenceBasis: Boolean(evidenceComparable),
     evidenceClassTarget: targetMeasurement.evidenceClass,
     evidenceClassCandidate: candidateMeasurement.evidenceClass,
+    targetUncertainty: targetMeasurement.uncertainty,
+    candidateUncertainty: candidateMeasurement.uncertainty,
+    targetEvidenceClassUncertainty: targetMeasurement.evidenceClassUncertainty,
+    candidateEvidenceClassUncertainty: candidateMeasurement.evidenceClassUncertainty,
     distributionUsed: Boolean(targetMeasurement.quantiles && candidateMeasurement.quantiles),
     targetRaw: targetMeasurement.raw,
     candidateRaw: candidateMeasurement.raw

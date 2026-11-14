@@ -2,7 +2,7 @@ import { $, reduceMotion } from '../utils/dom.js';
 import { TAU, D2R, shortest } from '../utils/math.js';
 import { TARGETS, analogOf } from '../data/index.js';
 import { state, curTarget } from '../core/state.js';
-import { makeGlobe, buildGeom, renderGlobe, project, stepGlobe, clampT } from '../graphics/globe.js';
+import { makeGlobe, buildGeom, renderGlobe, project, unproject, stepGlobe, clampT } from '../graphics/globe.js';
 import { texture } from '../graphics/textures.js';
 
 /**
@@ -28,7 +28,8 @@ let ovH = 0;
 
 let handlers = {
   onSelectAnalog: () => {},
-  onSelectTarget: () => {}
+  onSelectTarget: () => {},
+  onSelectLocation: () => {}
 };
 
 /* --------------------------- Layout --------------------------- */
@@ -73,6 +74,7 @@ export function flyEarth() {
 /** Ease the target globe towards the selected Moon/Mars target. */
 export function flyOther() {
   const t = curTarget();
+  if (!t) return;
   O.yawT = O.yaw + shortest(t.lon * D2R - O.yaw);
   O.tiltT = clampT(t.lat * D2R * .8);
 }
@@ -132,11 +134,12 @@ function drawOverlay(now) {
   const t = curTarget();
   const acc = state.mode === 'moon' ? '#38BDF8' : '#F97316';
   const EARTH = '#34D399';
-  const tp = project(O, t.lat, t.lon);
   const top = state.ranked.slice(0, 6);
 
   // Arcs from the target to the best Earth matches.
-  if (tp.z > .08) {
+  if (t) {
+    const tp = project(O, t.lat, t.lon);
+    if (tp.z > .08) {
     const arcFor = (r, sel) => {
       const a = r.analog;
       const ep = project(E, a.lat, a.lon);
@@ -167,6 +170,7 @@ function drawOverlay(now) {
     });
     const sel = state.ranked.find((r) => r.analog.id === state.analogId);
     if (sel) arcFor(sel, true);
+    }
   }
 
   // Earth pins: selected, top-six, then the rest.
@@ -197,7 +201,7 @@ function drawOverlay(now) {
   TARGETS.filter((x) => x.body === state.mode).forEach((x) => {
     const p = project(O, x.lat, x.lon);
     if (p.z <= .05) return;
-    const isSel = x.id === state.targetId;
+    const isSel = Boolean(state.targetId) && x.id === state.targetId;
     if (isSel) {
       const pulse = reduceMotion ? 10 : 9 + 2.5 * Math.sin(now / 260 + 1);
       drawPin(c, p.x, p.y, acc, { r: 6, glow: true, ring: pulse });
@@ -206,6 +210,18 @@ function drawOverlay(now) {
     }
     pins.push({ type: 'target', id: x.id, x: p.x, y: p.y, r: 14 });
     if (isSel || hoverPin === ('target:' + x.id)) label(c, p.x, p.y, x.name, acc);
+  });
+
+  // Exact user-selected points remain pinned even when no supported dataset
+  // exists to score them; the results panel explains that limitation.
+  const selectedPoints = [state.customEarthPoint && [E, state.customEarthPoint, EARTH],
+    state.customTarget && [O, state.customTarget, acc]].filter(Boolean);
+  selectedPoints.forEach(([globe, point, color]) => {
+    const p = project(globe, point.lat, point.lon);
+    if (p.z <= .05) return;
+    drawPin(c, p.x, p.y, color, { r: 6, glow: true, ring: 11 });
+    pins.push({ type: 'location', body: point.body, lat: point.lat, lon: point.lon, x: p.x, y: p.y, r: 14 });
+    label(c, p.x, p.y, point.name, color);
   });
 
   // Globe captions
@@ -274,7 +290,11 @@ function endDrag(e) {
   if (d.g) d.g.dragging = false;
   if (e.type === 'pointerup' && d.moved < 6 && d.pin) {
     if (d.pin.type === 'analog') handlers.onSelectAnalog(d.pin.id);
-    else handlers.onSelectTarget(d.pin.id);
+    else if (d.pin.type === 'target') handlers.onSelectTarget(d.pin.id);
+    else if (d.pin.type === 'location') handlers.onSelectLocation(d.pin.body, d.pin.lat, d.pin.lon);
+  } else if (e.type === 'pointerup' && d.moved < 6 && d.g) {
+    const point = unproject(d.g, d.x0, d.y0);
+    if (point) handlers.onSelectLocation(d.g === E ? 'earth' : state.mode, point.lat, point.lon);
   }
 }
 

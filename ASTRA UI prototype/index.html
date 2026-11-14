@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Analog Finder · ASTRA</title>
-  <meta name="description" content="Interactive prototype that ranks Earth analog test sites against Moon and Mars exploration targets, with weighted similarity scoring, 3D globes and a side-by-side comparison.">
+  <meta name="description" content="Discovers Earth analog test sites for Moon and Mars exploration targets from real climate, terrain, soil and geological data, with weighted similarity, propagated uncertainty and the differences no Earth site can replicate.">
   <meta name="theme-color" content="#0B0F19">
 
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -27,7 +27,7 @@
         </svg>
         <div>
           <h1>Analog Finder</h1>
-          <p>Earth test sites that stand in for Moon and Mars bases</p>
+          <p>Earth test sites discovered from climate, terrain and geological data</p>
         </div>
       </div>
 
@@ -36,7 +36,7 @@
         <button role="tab" id="tabCompare" aria-selected="false">Compare</button>
       </nav>
 
-      <span class="pill">Prototype · sample data</span>
+      <span class="pill" id="authStatus" aria-live="polite">NASA Earthdata · checking configuration</span>
     </header>
 
     <main id="viewExplore" class="explore">
@@ -61,7 +61,7 @@
           <canvas id="cvEarth" aria-label="Rotating Earth globe" role="img"></canvas>
           <canvas id="cvOther" aria-label="Rotating Moon or Mars globe" role="img"></canvas>
           <canvas id="overlay" aria-hidden="true"></canvas>
-          <span class="hint">Drag a globe to rotate · click a pin to select</span>
+          <span class="hint">Drag to rotate · click any visible point to select its coordinates</span>
         </div>
         <div class="pairbar">
           <div class="pair-names">
@@ -76,18 +76,21 @@
       <section class="panel p-results" aria-label="Ranked Earth matches">
         <span class="eyebrow">Step 3 · Best Earth matches</span>
         <h2 id="resTitle">Ranked sites</h2>
+        <p class="resmeta" id="resMeta"></p>
         <ol id="resultList"></ol>
-        <p class="fp-key">Small bars show how well each factor matches, left to right: temperature, ice, soil, terrain, dryness, lava tube.</p>
+        <p class="fp-key">Small bars show how well each factor matches, left to right: temperature, solar illumination, ice, soil, terrain, dryness, lava tube. Scores are ranked live from the weights you choose.</p>
         <details class="how">
-          <summary>How the score works</summary>
+          <summary>How the score and the sites are produced</summary>
           <ul>
-            <li>Each factor becomes a bounded distance between 0 and 1, using a documented cap.</li>
-            <li>Temperature uses a 200 °C cap; the 0–100 factors use their own 100-point scale.</li>
+            <li>The Earth is divided into a land grid. Every cell gets a climate screen from NASA POWER / MERRA-2. The best cells per target are then validated with SRTM relief, SoilGrids texture, Macrostrat geology, OSM cave entrances and a reverse geocoder.</li>
+            <li>No analog site is predefined. Place names are labels from a reverse geocoder; every factor value comes from the dataset named in the evidence trail.</li>
+            <li>Each factor becomes a bounded distance between 0 and 1, using a documented cap. Temperature uses 200 °C, solar irradiance 12 kWh/m²/day, and the 0–100 indexes use their own scale.</li>
             <li>Similarity = 100 × (1 − weighted mean distance). Your sliders set the weights.</li>
             <li>Missing or non-comparable factors are excluded and the remaining weights are renormalised; coverage is reported separately.</li>
-            <li>Lava-tube access is only counted when the selected target has a mapped tube or pit.</li>
+            <li>Lava-tube access is only counted when the selected target has a mapped tube or pit, and it is a capability proxy, not a surveyed cave.</li>
             <li>Confidence combines coverage, documentation quality and cross-body comparability. It is not the same thing as similarity.</li>
-            <li>Earth's gravity, air and magnetic field are not modeled. No site can match them.</li>
+            <li>Uncertainty is propagated from the target and site measurement errors. The ± value and the 95 % interval describe the score, not the quality of the site.</li>
+            <li>Gravity, vacuum, radiation, magnetic field, day length and atmosphere cannot be reproduced by choosing a different Earth site. The Compare screen lists them explicitly.</li>
           </ul>
         </details>
       </section>
@@ -96,9 +99,10 @@
     <main id="viewCompare" hidden></main>
 
     <p class="foot">
-      All numbers here are illustrative placeholders for a design prototype. Before use, replace them with real
-      datasets such as LOLA (Moon), HiRISE and MOLA (Mars) and USGS (Earth). Terrain previews are generated
-      shapes, not real elevation data.
+      Sites are generated by <code>node tools/discover.mjs</code> from NASA POWER, ISRIC SoilGrids, SRTM,
+      Macrostrat, OpenStreetMap and a reverse geocoder, then committed as a snapshot so this page works offline.
+      Target values come from published measurements (Diviner, LCROSS, MEDA, MCS/MCD) with their uncertainty.
+      Terrain previews are generated shapes for design, not elevation renders.
     </p>
   </div>
 

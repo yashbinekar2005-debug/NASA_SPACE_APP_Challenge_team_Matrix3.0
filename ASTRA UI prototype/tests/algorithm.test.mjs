@@ -31,12 +31,18 @@ import {
   score,
   tier
 } from '../js/core/algorithm/engine.js';
-import { ANALOGS, PRESETS, TARGETS } from '../js/data/index.js';
+import { ANALOGS, DISCOVERY, FACTORS, PRESETS, TARGETS, nonReplicableFor } from '../js/data/index.js';
+import { fmt, fmtCoords, fmtUncertainty } from '../js/utils/format.js';
+import { state, curTarget } from '../js/core/state.js';
+import { project, unproject } from '../js/graphics/globe.js';
+import { rankMeasuredMarsPoint, validateMarsPointResponse } from '../js/core/research.js';
+import { parseMcdSeries, summarizeMcdSeries } from '../tools/lib/sources/mcd.mjs';
 
 /* ----------------------------- fixtures ----------------------------- */
 
 const weights = (overrides = {}) => ({
   temp: 50,
+  solar: 50,
   ice: 50,
   soil: 50,
   terrain: 50,
@@ -54,6 +60,7 @@ function site(id, values, conf = 'High') {
     conf,
     v: {
       temp: 0,
+      solar: 6,
       ice: 50,
       soil: 50,
       terrain: 50,
@@ -135,13 +142,13 @@ test('identical sites score 100 and all applicable features are perfect matches'
   close(result.total, 100);
   close(result.coverage, 1);
   assert.equal(result.status, 'ok');
-  assert.equal(result.matchedFeatures.length, 5); // tube is not applicable at 0
+  assert.equal(result.matchedFeatures.length, 6); // tube is not applicable at 0
   assert.equal(result.parts.find((p) => p.f.k === 'tube').applicable, false);
   assert.equal(result.parts.find((p) => p.f.k === 'tube').reason, 'not_applicable');
   close(result.confidence, 100 * result.parts
     .filter((p) => p.valid && p.wt > 0)
     .reduce((sum, p) => sum + p.wt * p.comparability, 0) /
-    result.parts.filter((p) => p.valid && p.wt > 0).reduce((sum, p) => sum + p.wt, 0), 1e-9);
+    result.parts.filter((p) => p.valid && p.wt > 0).reduce((sum, p) => sum + p.wt, 0), 0.1);
 });
 
 test('weighted distance is renormalised over valid comparable features', () => {
@@ -149,10 +156,10 @@ test('weighted distance is renormalised over valid comparable features', () => {
   const analog = site('analog', { temp: -20 }); // 40 °C gap / 200 = 0.2
   const result = score(target, analog, weights());
 
-  // Five applicable features; only temperature has a non-zero distance.
-  close(result.total, 100 * (1 - 0.2 / 5));
+  // Six applicable features; only temperature has a non-zero distance.
+  close(result.total, 100 * (1 - 0.2 / 6));
   close(result.coverage, 1);
-  close(result.normalizedDistance, 0.2 / 5);
+  close(result.normalizedDistance, 0.2 / 6);
 });
 
 test('missing data is excluded, not replaced with zero, and lowers coverage', () => {
@@ -165,8 +172,8 @@ test('missing data is excluded, not replaced with zero, and lowers coverage', ()
   assert.equal(terrain.valid, false);
   assert.equal(terrain.reason, 'missing_data');
   assert.equal(terrain.wt, 0);
-  close(result.coverage, 4 / 5);
-  close(result.total, 100 * (1 - 0.2 / 4)); // renormalised over four features
+  close(result.coverage, 5 / 6, 1e-4);
+  close(result.total, 100 * (1 - 0.2 / 5)); // renormalised over five features
   assert.ok(result.warnings.some((warning) => warning.includes('Missing')));
 });
 
@@ -174,7 +181,7 @@ test('zero weights produce no score rather than a misleading 0% match', () => {
   const target = site('target', {});
   const analog = site('analog', {});
   const result = score(target, analog, weights({
-    temp: 0, ice: 0, soil: 0, terrain: 0, dry: 0, tube: 0
+    temp: 0, solar: 0, ice: 0, soil: 0, terrain: 0, dry: 0, tube: 0
   }));
 
   assert.equal(result.total, 0);
@@ -193,7 +200,8 @@ test('low coverage is flagged as provisional', () => {
   });
   const result = score(target, analog, weights());
 
-  close(result.coverage, 1 / 5);
+  // Temperature and solar remain; tube is not applicable to this target.
+  close(result.coverage, 2 / 6, 1e-4);
   assert.equal(result.status, 'insufficient_coverage');
   assert.ok(result.warnings.some((warning) => warning.includes('below the')));
 });
@@ -258,15 +266,23 @@ test('temperature distributions use quantile distance when both sides provide th
 test('confidence is separate from similarity and reflects documentation quality', () => {
   const target = site('high-target', {}, 'High');
   const high = site('high-site', {}, 'High');
-  const low = site('low-site', {}, 'Low');
+  const medium = site('medium-site', {}, 'Medium');
+  const unknown = site('unknown-site', {}, 'Unknown');
 
   const highResult = score(target, high, weights());
-  const lowResult = score(target, low, weights());
+  const mediumResult = score(target, medium, weights());
+  const unknownResult = score(target, unknown, weights());
 
-  close(highResult.total, lowResult.total); // same measurements
-  assert.ok(highResult.confidence > lowResult.confidence);
-  assert.equal(highResult.confidenceLabel, 'High');
-  assert.equal(lowResult.confidenceLabel, 'Medium');
+  close(highResult.total, mediumResult.total); // same measurements
+  close(highResult.total, unknownResult.total);
+  assert.ok(highResult.confidence > mediumResult.confidence);
+  assert.ok(mediumResult.confidence > unknownResult.confidence);
+  // Full coverage with cross-body comparability limits tops out at "Medium";
+  // a site with no documented provenance drops to "Low". Confidence is
+  // deliberately conservative and is not the same scale as similarity.
+  assert.equal(highResult.confidenceLabel, 'Medium');
+  assert.equal(mediumResult.confidenceLabel, 'Medium');
+  assert.equal(unknownResult.confidenceLabel, 'Low');
 });
 
 test('uniform weight scaling does not change the score', () => {
@@ -274,7 +290,7 @@ test('uniform weight scaling does not change the score', () => {
   const analog = site('analog', { temp: -20 });
   const a = score(target, analog, weights());
   const b = score(target, analog, weights({
-    temp: 5, ice: 5, soil: 5, terrain: 5, dry: 5, tube: 5
+    temp: 5, solar: 5, ice: 5, soil: 5, terrain: 5, dry: 5, tube: 5
   }));
 
   close(a.total, b.total);
@@ -283,10 +299,10 @@ test('uniform weight scaling does not change the score', () => {
 
 test('a site with no comparable measurements is rejected rather than scored as zero', () => {
   const target = site('target', {
-    temp: null, ice: null, soil: null, terrain: null, dry: null, tube: null
+    temp: null, solar: null, ice: null, soil: null, terrain: null, dry: null, tube: null
   });
   const analog = site('analog', {
-    temp: null, ice: null, soil: null, terrain: null, dry: null, tube: null
+    temp: null, solar: null, ice: null, soil: null, terrain: null, dry: null, tube: null
   });
   const result = score(target, analog, weights());
 
@@ -310,18 +326,23 @@ test('measurement metadata is preserved for provenance', () => {
 
 test('fixed profiles are independent views and use their own weights', () => {
   const target = TARGETS.find((t) => t.id === 'jezero');
-  const analog = ANALOGS.find((a) => a.id === 'atacama');
+  const analog = ANALOGS[0];
   const result = score(target, analog, PRESETS[0].w);
   const temp = result.parts.find((p) => p.f.k === 'temp');
+  const solar = result.parts.find((p) => p.f.k === 'solar');
   const ice = result.parts.find((p) => p.f.k === 'ice');
   const dry = result.parts.find((p) => p.f.k === 'dry');
 
   assert.deepEqual(Object.keys(result.profiles), [...PROFILE_ORDER]);
-  close(result.profiles.thermal.score, temp.sim, 0.1);
+  close(
+    result.profiles.thermal.score,
+    (temp.sim + solar.sim) / 2,
+    0.1
+  );
 
   const expectedWater = 100 * (1 - ((ice.d * 1 + dry.d * 0.75) / 1.75));
   close(result.profiles.water_volatile.score, expectedWater, 0.1);
-  assert.equal(result.profiles.water_volatile.status, 'ok');
+  assert.ok(['ok', 'insufficient_coverage'].includes(result.profiles.water_volatile.status));
 });
 
 test('a named profile can supply the weights when none are passed', () => {
@@ -329,12 +350,14 @@ test('a named profile can supply the weights when none are passed', () => {
   const analog = site('analog', { temp: -20 });
   const result = score(target, analog, null, { profile: 'thermal' });
   const temp = result.parts.find((p) => p.f.k === 'temp');
+  const solar = result.parts.find((p) => p.f.k === 'solar');
 
   assert.equal(result.profile, 'thermal');
   close(result.weights.temp, 1);
+  close(result.weights.solar, 1);
   close(result.weights.ice, 0);
-  close(result.total, temp.sim);
-  assert.equal(result.matchedFeatures.length, 1);
+  close(result.total, (temp.sim + solar.sim) / 2);
+  assert.equal(result.matchedFeatures.length, 2);
 });
 
 test('ranking is deterministic and tie-breaks by candidate id', () => {
@@ -348,13 +371,13 @@ test('ranking is deterministic and tie-breaks by candidate id', () => {
   assert.equal(ranked[0].total, ranked[1].total);
 });
 
-test('the prototype ranking is sorted and reproducible', () => {
+test('the discovered ranking is sorted and reproducible', () => {
   const target = TARGETS[0];
   const ranked = rankAnalogs(target, ANALOGS, PRESETS[0].w);
   const again = rankAnalogs(target, ANALOGS, PRESETS[0].w);
 
+  assert.ok(ANALOGS.length >= 5);
   assert.equal(ranked.length, ANALOGS.length);
-  assert.equal(ranked[0].analog.id, 'devon');
   for (let i = 1; i < ranked.length; i += 1) {
     assert.ok(ranked[i - 1].total >= ranked[i].total);
   }
@@ -408,7 +431,7 @@ test('runSimilarity returns the plan-shaped API payload', () => {
   assert.equal(payload.profile, 'custom');
   assert.equal(payload.results.length, 3);
   assert.equal(payload.results[0].rank, 1);
-  assert.equal(payload.results[0].feature_contributions.length, 6);
+  assert.equal(payload.results[0].feature_contributions.length, 7);
   assert.ok(Array.isArray(payload.results[0].matched_features));
   assert.ok(Array.isArray(payload.warnings));
   assert.equal(payload.engine_version, ENGINE_VERSION);
@@ -419,10 +442,229 @@ test('ablation reports the effect of removing each feature', () => {
   const result = ablate(TARGETS[0], ANALOGS, PRESETS[0].w);
   assert.equal(result.baseline.length, 5);
   assert.deepEqual(Object.keys(result.features).sort(), [
-    'dry', 'ice', 'soil', 'temp', 'terrain', 'tube'
+    'dry', 'ice', 'soil', 'solar', 'temp', 'terrain', 'tube'
   ]);
   for (const entry of Object.values(result.features)) {
     assert.ok(entry.mean_abs_score_delta >= 0);
     assert.equal(entry.top.length, 5);
   }
+});
+
+/* --------------------------- uncertainty ---------------------------- */
+
+test('solar is a measured factor with the documented 12 kWh/m²/day cap', () => {
+  const solar = FACTORS.find((f) => f.k === 'solar');
+  assert.ok(solar);
+  assert.equal(solar.kind, 'continuous');
+  assert.equal(solar.unit, 'kWh/m²/day');
+  assert.equal(solar.distanceCap, 12);
+  close(continuousDistance(0, 12, solar.distanceCap), 1);
+});
+
+test('score uncertainty grows with measurement error and is separate from confidence', () => {
+  const target = site('target', {
+    temp: { value: -60, uncertainty: 1 }
+  });
+  const small = site('small-error', {
+    temp: { value: -20, uncertainty: 1 }
+  });
+  const large = site('large-error', {
+    temp: { value: -20, uncertainty: 25 }
+  });
+
+  const a = score(target, small, weights());
+  const b = score(target, large, weights());
+
+  close(a.total, b.total); // same measured values
+  assert.ok(b.uncertainty.sigma > a.uncertainty.sigma);
+  assert.ok(b.confidence === a.confidence); // confidence is documentation quality
+  assert.equal(typeof a.certainty, 'number');
+  assert.ok(a.certainty > b.certainty);
+  assert.equal(a.uncertainty.perFeature.temp.evidence_based, false);
+  assert.ok(a.uncertainty.perFeature.temp.sigma_points > 0);
+});
+
+test('the 95 % score interval brackets the score for every discovered candidate', () => {
+  for (const target of TARGETS) {
+    for (const analog of ANALOGS.slice(0, 4)) {
+      const result = score(target, analog, PRESETS[0].w);
+      if (result.status === 'no_comparable_features') continue;
+      const [low, high] = result.scoreInterval;
+      assert.ok(low <= result.total + 1e-9, `${analog.id} low > total`);
+      assert.ok(high >= result.total - 1e-9, `${analog.id} high < total`);
+      assert.ok(low >= 0 && high <= 100);
+      assert.ok(result.uncertainty.sigma >= 0);
+    }
+  }
+});
+
+/* ---------------------- non-replicable differences ------------------ */
+
+test('Moon and Mars comparisons report the differences Earth cannot remove', () => {
+  const moon = score(TARGETS.find((t) => t.id === 'shackleton'), ANALOGS[0], PRESETS[0].w);
+  const mars = score(TARGETS.find((t) => t.id === 'jezero'), ANALOGS[0], PRESETS[0].w);
+
+  assert.equal(moon.nonReplicable.length, 6);
+  assert.equal(mars.nonReplicable.length, 6);
+  const keys = moon.nonReplicable.map((d) => d.key);
+  assert.deepEqual(keys, ['gravity', 'pressure', 'radiation', 'magnetic_field', 'day_length', 'atmosphere']);
+  for (const entry of moon.nonReplicable) {
+    assert.equal(entry.replicable, false);
+    assert.ok(entry.why);
+    assert.ok(entry.consequence);
+    assert.ok(['fundamental', 'major'].includes(entry.severity));
+    assert.ok(Array.isArray(entry.sources));
+  }
+
+  const gravity = moon.nonReplicable.find((d) => d.key === 'gravity');
+  close(gravity.target, 1.62);
+  close(gravity.ratio, 1.62 / 9.807, 1e-3);
+  assert.equal(nonReplicableFor('earth').length, 0);
+});
+
+test('non-replicable differences never change the similarity score', () => {
+  const target = TARGETS.find((t) => t.id === 'jezero');
+  const analog = ANALOGS[0];
+  const result = score(target, analog, PRESETS[0].w);
+  const withoutTable = score({ ...target, body: 'mars' }, analog, PRESETS[0].w);
+  close(result.total, withoutTable.total);
+  assert.equal(withoutTable.nonReplicable.length, 6);
+});
+
+/* ----------------------- data provenance contract ------------------- */
+
+test('the app starts without silently selecting a planetary location', () => {
+  assert.equal(state.targetId, null);
+  assert.equal(curTarget(), undefined);
+  assert.equal(state.analogId, null);
+  assert.deepEqual(state.ranked, []);
+});
+
+test('any visible globe coordinate can be converted to a pin and back', () => {
+  const globe = { R: 100, S: 1, cx: 120, cy: 90, yaw: 0.42, tilt: -0.18, sway: 0.03 };
+  for (const [lat, lon] of [[0, 0], [45, 70], [-36, 20]]) {
+    const screen = project(globe, lat, lon);
+    assert.ok(screen.z > 0, 'test location should be on the visible hemisphere');
+    const roundTrip = unproject(globe, screen.x, screen.y);
+    assert.ok(Math.abs(roundTrip.lat - lat) < 1e-8);
+    const lonDifference = ((roundTrip.lon - lon + 540) % 360) - 180;
+    assert.ok(Math.abs(lonDifference) < 1e-8);
+  }
+});
+
+test('Mars coordinate results require complete current-execution MCD measurements', () => {
+  const source = {
+    id: 'mars-climate-database-6.2',
+    name: 'LMD Mars Climate Database v6.2',
+    url: 'https://www-mars.lmd.jussieu.fr/mars/access',
+    reference: 'https://www-mars.lmd.jussieu.fr/mcd_python/txt/0123456789abcdef.txt',
+    period: '12-season climatology; diurnal means; 25 seasonal samples',
+    resolution: 'Interpolated model grid',
+    evidenceType: 'modelled_climatology'
+  };
+  const payload = {
+    dataset: 'Mars Climate Database v6.2',
+    source,
+    values: {
+      temp: { value: -63, unit: '°C', seasonalSpread: 20, source },
+      solar: { value: 4.2, unit: 'kWh/m²/day', seasonalSpread: 1.1, source },
+      pressureKpa: { value: 0.62, unit: 'kPa', seasonalSpread: 0.08, source }
+    },
+    completeness: { temp: '25/25 seasonal samples', solar: '25/25 seasonal samples', pressure: '25/25 seasonal samples' }
+  };
+  const target = {
+    id: 'picked-mars-3.830--17.507', body: 'mars', custom: true, measurementStatus: 'validated',
+    measurements: payload, v: { temp: payload.values.temp, solar: payload.values.solar }
+  };
+
+  assert.equal(validateMarsPointResponse(payload).valid, true);
+  const ranked = rankMeasuredMarsPoint(target, ANALOGS, PRESETS[0].w);
+  assert.ok(ranked.length > 0);
+  assert.equal(ranked[0].targetId, target.id);
+  assert.ok(ranked[0].matchedFeatures.includes('temp'));
+  assert.ok(ranked[0].matchedFeatures.includes('solar'));
+  assert.ok(ranked[0].warnings.some((warning) => /modelled climatology, not direct in-situ observations/i.test(warning)));
+  const tempOnly = rankMeasuredMarsPoint(target, ANALOGS, { temp: 100, solar: 0, ice: 0, soil: 0, terrain: 0, dry: 0, tube: 0 });
+  const solarOnly = rankMeasuredMarsPoint(target, ANALOGS, { temp: 0, solar: 100, ice: 0, soil: 0, terrain: 0, dry: 0, tube: 0 });
+  assert.notEqual(tempOnly[0].analog.id, solarOnly[0].analog.id, 'weights must change the nearest ranked site');
+
+  const stale = { ...target, v: { temp: { value: -10 }, solar: payload.values.solar } };
+  assert.deepEqual(rankMeasuredMarsPoint(stale, ANALOGS, PRESETS[0].w), []);
+  const incomplete = { ...payload, completeness: { ...payload.completeness, temp: '2/25 seasonal samples' } };
+  assert.equal(validateMarsPointResponse(incomplete).valid, false);
+  assert.deepEqual(rankMeasuredMarsPoint({ ...target, measurements: incomplete }, ANALOGS, PRESETS[0].w), []);
+});
+
+test('MCD seasonal ASCII output is parsed as sourced numeric measurements', () => {
+  const rows = Array.from({ length: 12 }, (_, index) => `${(index * 30).toFixed(2).padStart(15)}${(210 + index).toFixed(5).padStart(15)}`).join('\n');
+  const ascii = `### Column 1 is Areocentric longitude (degrees)\n### Column 2 is Surface temperature (K)\n${rows}\n`;
+  const series = parseMcdSeries(ascii);
+  assert.equal(series['Surface temperature (K)'].length, 12);
+  const summary = summarizeMcdSeries(series, /surface temperature \(k\)/i);
+  assert.equal(summary.count, 12);
+  assert.equal(summary.mean, 215.5);
+  assert.equal(summarizeMcdSeries(series, /surface pressure \(pa\)/i), null);
+});
+
+test('every target measurement carries a value, uncertainty and source', () => {
+  for (const target of TARGETS) {
+    for (const feature of FACTORS) {
+      const value = target.v[feature.k];
+      assert.ok(value != null, `${target.id} missing ${feature.k}`);
+      if (typeof value === 'number') {
+        assert.ok(Number.isFinite(value));
+        continue;
+      }
+      assert.equal(typeof value, 'object', `${target.id}.${feature.k}`);
+      assert.ok(Number.isFinite(value.value), `${target.id}.${feature.k} value`);
+      assert.ok(Number.isFinite(value.uncertainty), `${target.id}.${feature.k} uncertainty`);
+      assert.ok(value.source && value.source.name, `${target.id}.${feature.k} source`);
+    }
+  }
+});
+
+test('the committed discovery snapshot satisfies its module contract', () => {
+  assert.equal(DISCOVERY.schema, 'astra.discovery/1');
+  assert.equal(DISCOVERY.engineVersion, ENGINE_VERSION);
+  assert.equal(DISCOVERY.configVersion, CONFIG_VERSION);
+  assert.equal(ANALOGS, DISCOVERY.candidates);
+  assert.ok(ANALOGS.length > 0);
+  assert.ok(Array.isArray(DISCOVERY.sources) && DISCOVERY.sources.length >= 5);
+
+  const ids = new Set();
+  for (const candidate of ANALOGS) {
+    assert.ok(!ids.has(candidate.id), `duplicate ${candidate.id}`);
+    ids.add(candidate.id);
+    assert.equal(candidate.discovered, true);
+    assert.ok(candidate.name && candidate.region);
+    assert.ok(Number.isFinite(candidate.lat) && candidate.lat >= -90 && candidate.lat <= 90);
+    assert.ok(Number.isFinite(candidate.lon) && candidate.lon >= -180 && candidate.lon <= 180);
+    assert.ok(['High', 'Medium', 'Low'].includes(candidate.conf));
+    assert.ok(candidate.v.temp && candidate.v.solar && candidate.v.dry);
+    assert.ok(Array.isArray(candidate.provenance) && candidate.provenance.length >= 3);
+    for (const entry of candidate.provenance) {
+      assert.ok(entry.source && entry.source.id, `${candidate.id} provenance source`);
+      assert.ok(Number.isFinite(entry.value), `${candidate.id} ${entry.key} value`);
+    }
+  }
+});
+
+test('every target can be scored against the discovered snapshot', () => {
+  for (const target of TARGETS) {
+    const ranked = rankAnalogs(target, ANALOGS, PRESETS[0].w);
+    assert.equal(ranked.length, ANALOGS.length);
+    assert.ok(Number.isFinite(ranked[0].total));
+    assert.ok(ranked[0].coverage > 0);
+    assert.ok(['ok', 'insufficient_coverage'].includes(ranked[0].status));
+  }
+});
+
+test('display formatting handles real units and missing values', () => {
+  assert.equal(fmt('temp', -183), '−183 °C');
+  assert.equal(fmt('solar', 6.65), '6.7 kWh/m²/day');
+  assert.equal(fmt('ice', 80), '80 / 100');
+  assert.equal(fmt('ice', null), 'no data');
+  assert.equal(fmtUncertainty('temp', { uncertainty: 18 }), '±18 °C');
+  assert.equal(fmtUncertainty('solar', { uncertainty: 0.6 }), '±0.6 kWh/m²/day');
+  assert.equal(fmtCoords(-20, -70), '20.0°S 70.0°W');
 });

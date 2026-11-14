@@ -9,3 +9,8 @@ desktop.ini
 # Dependencies (not used by the static site, kept for future tooling)
 node_modules/
 package-lock.json
+
+# Local secrets and cached API responses
+.env
+.env.local
+.cache/

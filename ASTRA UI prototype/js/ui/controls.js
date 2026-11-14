@@ -50,10 +50,14 @@ export function renderSliders() {
 
 /** Dim the lava-tube weight when the selected target has no tube. */
 export function updateSliderState() {
-  const off = curTarget().v.tube < 50;
+  const target = curTarget();
+  const tube = target?.v?.tube;
+  const off = (typeof tube === 'number' ? tube : tube?.value) < 50;
   const row = $('#sl-tube');
   row.classList.toggle('off', off);
-  row.querySelector('small').textContent = off
-    ? 'Not used: this target has no lava tube'
-    : 'Lava tube or cave entrances';
+  row.querySelector('small').textContent = !target
+    ? 'Choose a Moon or Mars target first'
+    : off
+      ? 'Not used: this target has no lava tube'
+      : 'Lava tube or cave entrances';
 }

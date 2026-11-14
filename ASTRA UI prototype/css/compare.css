@@ -54,6 +54,7 @@
 .facts div{display:grid;grid-template-columns:128px minmax(0,1fr);gap:10px;padding:7px 0;border-top:1px solid var(--line)}
 .facts dt{color:var(--muted)}
 .facts dd{margin:0;font-family:var(--font-mono);font-size:12.5px;overflow-wrap:anywhere}
+.facts .u{color:var(--faint);font-size:11px}
 
 /* Per-factor score bars */
 .brow{display:grid;gap:5px;padding:10px 0;border-top:1px solid var(--line)}
@@ -116,6 +117,58 @@
 .explain{color:var(--fg);font-size:12.5px;line-height:1.5;margin:0 0 10px}
 .warnlist{margin:0;padding-left:18px;display:grid;gap:5px;color:var(--muted);font-size:12px}
 .warnlist li::marker{color:var(--warn)}
+
+/* Score uncertainty block */
+.uncert{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.uncert .metrics{margin-top:8px;margin-bottom:6px}
+
+/* Evidence and provenance */
+.prov{border-top:1px solid var(--line);margin-top:12px;padding-top:10px;color:var(--muted);font-size:12px}
+.prov summary{cursor:pointer;color:var(--fg);font-weight:500}
+.prov ul{margin:8px 0 0;padding-left:16px;display:grid;gap:6px}
+.prov li{overflow-wrap:anywhere}
+.prov li b{color:var(--fg);font-weight:500}
+.prov li span{display:block;color:var(--faint);font-size:11px;margin-top:1px}
+.prov a{color:var(--accent);text-decoration:none;border-bottom:1px dotted currentColor}
+
+/* Non-replicable differences */
+.nr{margin-top:16px}
+.nr h2{font-size:19px;font-weight:600;margin-bottom:6px}
+.nr-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-top:12px}
+.nr-card{
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--card);
+  padding:11px 12px;
+  display:grid;
+  gap:6px;
+}
+.nr-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+.nr-hd{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nr-hd b{font-family:var(--font-display);font-weight:600;font-size:13.5px}
+.nr-values{
+  font-family:var(--font-mono);
+  font-size:11.5px;
+  color:var(--fg)!important;
+  display:flex;
+  flex-wrap:wrap;
+  gap:4px;
+}
+.nr-values span{color:var(--faint)}
+.nr-consequence{color:var(--fg)!important}
+.nr-consequence b{color:var(--accent);font-weight:500}
+.sev{
+  font-family:var(--font-mono);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+  border-radius:99px;
+  padding:1px 8px;
+  border:1px solid var(--line-strong);
+  color:var(--muted);
+}
+.sev.fundamental{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.sev.major{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
 
 
 #copyOut{

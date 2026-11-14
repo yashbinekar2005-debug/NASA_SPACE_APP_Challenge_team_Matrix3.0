@@ -8,8 +8,8 @@ import { FACTORS } from '../../data/factors.js';
  * are not extra measurements and they do not change the custom ranking.
  */
 
-export const ENGINE_VERSION = '1.0.0';
-export const CONFIG_VERSION = '2026.11.1';
+export const ENGINE_VERSION = '2.0.0';
+export const CONFIG_VERSION = '2026.11.2';
 
 export const FEATURE_KEYS = FACTORS.map((f) => f.k);
 export const FEATURE_BY_KEY = Object.freeze(
@@ -43,7 +43,7 @@ export const PROFILE_DEFINITIONS = {
     id: 'balanced_overall',
     label: 'Balanced overall',
     description: 'All comparable features equally weighted.',
-    weights: { temp: 1, ice: 1, soil: 1, terrain: 1, dry: 1, tube: 1 },
+    weights: { temp: 1, solar: 1, ice: 1, soil: 1, terrain: 1, dry: 1, tube: 1 },
     caveat:
       'The overall score is a research prototype. It is relative to the selected features ' +
       'and weights and has not been validated as a measure of habitability or mission suitability.'
@@ -51,8 +51,8 @@ export const PROFILE_DEFINITIONS = {
   thermal: {
     id: 'thermal',
     label: 'Thermal',
-    description: 'Surface temperature similarity only.',
-    weights: { temp: 1 },
+    description: 'Surface temperature and illumination similarity.',
+    weights: { temp: 1, solar: 1 },
     caveat: 'Compares regional temperature statistics, not local-time or seasonal extremes.'
   },
   terrain: {
@@ -82,7 +82,7 @@ export const PROFILE_DEFINITIONS = {
     id: 'mission_operations',
     label: 'Mission operations',
     description: 'Terrain, thermal conditions and tube shelter capability.',
-    weights: { temp: 0.5, terrain: 1, tube: 1 },
+    weights: { temp: 0.5, solar: 0.5, terrain: 1, tube: 1 },
     caveat:
       'A first-order operations view only. Illumination, communication, dust, radiation and ' +
       'trafficability are not modelled.'

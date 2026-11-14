@@ -47,6 +47,8 @@ export function readMeasurement(site, key) {
       value,
       quantiles: quantiles ? quantilesRaw : null,
       evidenceClass,
+      evidenceClassUncertainty:
+        firstFinite(raw.evidenceClassUncertainty, raw.evidence_class_uncertainty) ?? null,
       uncertainty: raw.uncertainty ?? raw.error ?? null,
       source: raw.source ?? raw.sourceDataset ?? raw.source_dataset ?? null,
       measurementType: raw.measurementType ?? raw.measurement_type ?? null,

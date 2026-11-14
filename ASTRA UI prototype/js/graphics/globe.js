@@ -147,6 +147,28 @@ export function project(g, lat, lon) {
   return { x: g.cx + px * Rc, y: g.cy - vy * Rc, z: vz };
 }
 
+/** Invert a visible CSS pixel on the globe to its current lat/lon. */
+export function unproject(g, x, y) {
+  const radius = g.R / g.S;
+  if (!(radius > 0)) return null;
+  const px = (x - g.cx) / radius;
+  const vy = (g.cy - y) / radius;
+  const r2 = px * px + vy * vy;
+  if (r2 > 1) return null;
+
+  const vz = Math.sqrt(Math.max(0, 1 - r2));
+  const c = Math.cos(g.tilt);
+  const s = Math.sin(g.tilt);
+  const py = vy * c + vz * s;
+  const pz = -vy * s + vz * c;
+  const lat = Math.asin(clamp(py, -1, 1)) / (Math.PI / 180);
+  const lon = (Math.atan2(px, pz) + g.yaw + g.sway) / (Math.PI / 180);
+  return {
+    lat: Math.max(-90, Math.min(90, lat)),
+    lon: ((lon + 180) % 360 + 360) % 360 - 180
+  };
+}
+
 /** Ease towards the target orientation and add a slow idle sway. */
 export function stepGlobe(g, now, reduceMotion) {
   if (!g.dragging) {

@@ -1,0 +1,2583 @@
+{
+  "schema": "astra.discovery/1",
+  "generatedAt": "2026-11-14T16:58:16.817Z",
+  "engineVersion": "2.0.0",
+  "configVersion": "2026.11.2",
+  "generator": "tools/discover.mjs",
+  "grid": {
+    "stepDegrees": 20,
+    "landCellsBuilt": 79,
+    "cellsScreened": 79,
+    "cellsWithClimate": 79,
+    "shortlisted": 12,
+    "validated": 12
+  },
+  "shortlist": {
+    "perTarget": 6,
+    "maxCandidates": 12,
+    "targets": [
+      "jezero"
+    ]
+  },
+  "sources": [
+    {
+      "id": "nasa-power",
+      "name": "NASA POWER / MERRA-2 monthly climatology",
+      "url": "https://power.larc.nasa.gov/",
+      "role": "temperature, solar irradiance, precipitation, humidity, snow, soil wetness, frost days",
+      "auth": "None (public)",
+      "period": "2001-2025"
+    },
+    {
+      "id": "soilgrids",
+      "name": "ISRIC SoilGrids 2.0",
+      "url": "https://soilgrids.org/",
+      "role": "0–5 cm clay/sand/silt, organic carbon, bulk density, coarse fragments",
+      "auth": "None (public)",
+      "resolution": "250 m"
+    },
+    {
+      "id": "opentopodata-srtm90m",
+      "name": "OpenTopoData / NASA SRTM 90 m",
+      "url": "https://www.opentopodata.org/",
+      "role": "3×3 local relief sample",
+      "auth": "Optional key for higher limits",
+      "resolution": "90 m"
+    },
+    {
+      "id": "macrostrat",
+      "name": "Macrostrat geologic map",
+      "url": "https://macrostrat.org/",
+      "role": "mapped lithology and age",
+      "auth": "None (public, CC-BY 4.0)"
+    },
+    {
+      "id": "osm-overpass",
+      "name": "OpenStreetMap cave entrances via Overpass",
+      "url": "https://www.openstreetmap.org/",
+      "role": "mapped cave/tube access capability",
+      "auth": "None (public, ODbL 1.0)"
+    },
+    {
+      "id": "bigdatacloud",
+      "name": "BigDataCloud reverse geocode",
+      "url": "https://www.bigdatacloud.com/",
+      "role": "human-readable place labels only; never used in scoring",
+      "auth": "None (public client endpoint)"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "earth-n20p0_e10p0",
+      "name": "Arlit",
+      "region": "Niger",
+      "lat": 20,
+      "lon": 10,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "High",
+      "tags": [
+        "Validated cell",
+        "sedimentary"
+      ],
+      "v": {
+        "temp": {
+          "value": 25.62,
+          "uncertainty": 1.91,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 7.6 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 6.65,
+          "uncertainty": 0.25,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 20,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.41."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 1,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": {
+          "value": 48.1,
+          "uncertainty": 28,
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Texture only: sand fraction 48 %. No mapped bedrock unit at this point."
+          },
+          "measurementType": "mafic_soil_proxy",
+          "unit": "index",
+          "geology": null,
+          "sandFraction": 0.48100000000000004
+        },
+        "terrain": {
+          "value": 3.2,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=19.9200%2C9.9200%7C19.9200%2C10.0000%7C19.9200%2C10.0800%7C20.0000%2C9.9200%7C20.0000%2C10.0000%7C20.0000%2C10.0800%7C20.0800%2C9.9200%7C20.0800%2C10.0000%7C20.0800%2C10.0800",
+            "note": "Local relief 32 m over a 9 km 3×3 sample; σ 12 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 93.14,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 15 mm/yr; RH = 19 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Texture only: sand fraction 48 %. No mapped bedrock unit at this point.",
+      "terrainDesc": "Local relief 32 m over a 9 km 3×3 sample; σ 12 m.",
+      "summary": "25.62 °C mean surface; 6.65 kWh/m²/day solar; water evidence class 1/3; soil proxy 48.1/100; relief proxy 3.2/100. Mapped geology: sedimentary.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 7.6 °C."
+          },
+          "value": 25.62,
+          "unit": "°C",
+          "uncertainty": 1.91,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 7.6 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 6.65,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.25,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.41."
+          },
+          "value": 20,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 1,
+          "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.41."
+        },
+        {
+          "key": "soil",
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Texture only: sand fraction 48 %. No mapped bedrock unit at this point."
+          },
+          "value": 48.1,
+          "unit": "index",
+          "uncertainty": 28,
+          "evidence_class": null,
+          "note": "Texture only: sand fraction 48 %. No mapped bedrock unit at this point."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=19.9200%2C9.9200%7C19.9200%2C10.0000%7C19.9200%2C10.0800%7C20.0000%2C9.9200%7C20.0000%2C10.0000%7C20.0000%2C10.0800%7C20.0800%2C9.9200%7C20.0800%2C10.0000%7C20.0800%2C10.0800",
+            "note": "Local relief 32 m over a 9 km 3×3 sample; σ 12 m."
+          },
+          "value": 3.2,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 32 m over a 9 km 3×3 sample; σ 12 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 15 mm/yr; RH = 19 %."
+          },
+          "value": 93.14,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 15 mm/yr; RH = 19 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "soilgrids+macrostrat",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 83,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 956,
+        "rough": 0.15,
+        "crater": 0.27025,
+        "pit": 0,
+        "ripple": 0.3367
+      }
+    },
+    {
+      "id": "earth-n20p0_e95p6",
+      "name": "Taungdwingyi",
+      "region": "Myanmar",
+      "lat": 20,
+      "lon": 95.6,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "High",
+      "tags": [
+        "Validated cell",
+        "sedimentary rocks"
+      ],
+      "v": {
+        "temp": {
+          "value": 28.75,
+          "uncertainty": 0.8,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=95.6&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 3.1 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 5.36,
+          "uncertainty": 0.2,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=95.6&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 20,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=95.6&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.58."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 1,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": {
+          "value": 42.3,
+          "uncertainty": 28,
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Texture only: sand fraction 42 %. No mapped bedrock unit at this point."
+          },
+          "measurementType": "mafic_soil_proxy",
+          "unit": "index",
+          "geology": null,
+          "sandFraction": 0.423
+        },
+        "terrain": {
+          "value": 16.1,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=19.9200%2C95.5200%7C19.9200%2C95.6000%7C19.9200%2C95.6800%7C20.0000%2C95.5200%7C20.0000%2C95.6000%7C20.0000%2C95.6800%7C20.0800%2C95.5200%7C20.0800%2C95.6000%7C20.0800%2C95.6800",
+            "note": "Local relief 161 m over a 9 km 3×3 sample; σ 55 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 52.11,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=95.6&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 442 mm/yr; RH = 57 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Texture only: sand fraction 42 %. No mapped bedrock unit at this point.",
+      "terrainDesc": "Local relief 161 m over a 9 km 3×3 sample; σ 55 m.",
+      "summary": "28.75 °C mean surface; 5.36 kWh/m²/day solar; water evidence class 1/3; soil proxy 42.3/100; relief proxy 16.1/100. Mapped geology: sedimentary rocks.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=95.6&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 3.1 °C."
+          },
+          "value": 28.75,
+          "unit": "°C",
+          "uncertainty": 0.8,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 3.1 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=95.6&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 5.36,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.2,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=95.6&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.58."
+          },
+          "value": 20,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 1,
+          "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.58."
+        },
+        {
+          "key": "soil",
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Texture only: sand fraction 42 %. No mapped bedrock unit at this point."
+          },
+          "value": 42.3,
+          "unit": "index",
+          "uncertainty": 28,
+          "evidence_class": null,
+          "note": "Texture only: sand fraction 42 %. No mapped bedrock unit at this point."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=19.9200%2C95.5200%7C19.9200%2C95.6000%7C19.9200%2C95.6800%7C20.0000%2C95.5200%7C20.0000%2C95.6000%7C20.0000%2C95.6800%7C20.0800%2C95.5200%7C20.0800%2C95.6000%7C20.0800%2C95.6800",
+            "note": "Local relief 161 m over a 9 km 3×3 sample; σ 55 m."
+          },
+          "value": 16.1,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 161 m over a 9 km 3×3 sample; σ 55 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=95.6&latitude=20&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 442 mm/yr; RH = 57 %."
+          },
+          "value": 52.11,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 442 mm/yr; RH = 57 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "soilgrids+macrostrat",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 76,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 404,
+        "rough": 0.161,
+        "crater": 0.25575,
+        "pit": 0,
+        "ripple": 0.2961
+      }
+    },
+    {
+      "id": "earth-n40p0_e90p0",
+      "name": "Ruoqiang",
+      "region": "China",
+      "lat": 40,
+      "lon": 90,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "High",
+      "tags": [
+        "Validated cell",
+        "sedimentary rocks"
+      ],
+      "v": {
+        "temp": {
+          "value": 14.19,
+          "uncertainty": 3.59,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=90&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 14.4 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 4.94,
+          "uncertainty": 0.43,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=90&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 37.19,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=90&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Seasonal snow or frequent frost. Snow 2.4 cm, frost 126 d/yr, root-zone wetness 0.34."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 2,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": {
+          "value": 39.4,
+          "uncertainty": 28,
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Texture only: sand fraction 39 %. No mapped bedrock unit at this point."
+          },
+          "measurementType": "mafic_soil_proxy",
+          "unit": "index",
+          "geology": null,
+          "sandFraction": 0.39399999999999996
+        },
+        "terrain": {
+          "value": 0.3,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=39.9200%2C89.9200%7C39.9200%2C90.0000%7C39.9200%2C90.0800%7C40.0000%2C89.9200%7C40.0000%2C90.0000%7C40.0000%2C90.0800%7C40.0800%2C89.9200%7C40.0800%2C90.0000%7C40.0800%2C90.0800",
+            "note": "Local relief 3 m over a 9 km 3×3 sample; σ 1 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 88.3,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=90&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 40 mm/yr; RH = 30 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Texture only: sand fraction 39 %. No mapped bedrock unit at this point.",
+      "terrainDesc": "Local relief 3 m over a 9 km 3×3 sample; σ 1 m.",
+      "summary": "14.19 °C mean surface; 4.94 kWh/m²/day solar; water evidence class 2/3; soil proxy 39.4/100; relief proxy 0.3/100. Mapped geology: sedimentary rocks.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=90&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 14.4 °C."
+          },
+          "value": 14.19,
+          "unit": "°C",
+          "uncertainty": 3.59,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 14.4 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=90&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 4.94,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.43,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=90&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Seasonal snow or frequent frost. Snow 2.4 cm, frost 126 d/yr, root-zone wetness 0.34."
+          },
+          "value": 37.19,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 2,
+          "note": "Seasonal snow or frequent frost. Snow 2.4 cm, frost 126 d/yr, root-zone wetness 0.34."
+        },
+        {
+          "key": "soil",
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Texture only: sand fraction 39 %. No mapped bedrock unit at this point."
+          },
+          "value": 39.4,
+          "unit": "index",
+          "uncertainty": 28,
+          "evidence_class": null,
+          "note": "Texture only: sand fraction 39 %. No mapped bedrock unit at this point."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=39.9200%2C89.9200%7C39.9200%2C90.0000%7C39.9200%2C90.0800%7C40.0000%2C89.9200%7C40.0000%2C90.0000%7C40.0000%2C90.0800%7C40.0800%2C89.9200%7C40.0800%2C90.0000%7C40.0800%2C90.0800",
+            "note": "Local relief 3 m over a 9 km 3×3 sample; σ 1 m."
+          },
+          "value": 0.3,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 3 m over a 9 km 3×3 sample; σ 1 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=90&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 40 mm/yr; RH = 30 %."
+          },
+          "value": 88.3,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 40 mm/yr; RH = 30 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "soilgrids+macrostrat",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 79,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 336,
+        "rough": 0.15,
+        "crater": 0.2485,
+        "pit": 0,
+        "ripple": 0.27579999999999993
+      }
+    },
+    {
+      "id": "earth-n40p0_w4p4",
+      "name": "Santa Olalla",
+      "region": "Spain",
+      "lat": 40,
+      "lon": -4.4,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "High",
+      "tags": [
+        "Validated cell",
+        "sandstone, conglomerate, cla"
+      ],
+      "v": {
+        "temp": {
+          "value": 15.44,
+          "uncertainty": 2.22,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-4.4&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 8.9 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 4.68,
+          "uncertainty": 0.51,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-4.4&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 26.57,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-4.4&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.8 cm, frost 41 d/yr, root-zone wetness 0.53."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 1,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": {
+          "value": 45.72,
+          "uncertainty": 14,
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Geology: carbonate / karst (45/100); sand fraction 47 %."
+          },
+          "measurementType": "mafic_soil_proxy",
+          "unit": "index",
+          "geology": {
+            "score": 45,
+            "label": "carbonate / karst",
+            "karst": true,
+            "unit": "sandstone, conglomerate, clay; limestone and evaporites",
+            "lith": "sandstone, conglomerate, clay; limestone and evaporites",
+            "age": "Miocene"
+          },
+          "sandFraction": 0.474
+        },
+        "terrain": {
+          "value": 10.4,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=39.9200%2C-4.4800%7C39.9200%2C-4.4000%7C39.9200%2C-4.3200%7C40.0000%2C-4.4800%7C40.0000%2C-4.4000%7C40.0000%2C-4.3200%7C40.0800%2C-4.4800%7C40.0800%2C-4.4000%7C40.0800%2C-4.3200",
+            "note": "Local relief 104 m over a 9 km 3×3 sample; σ 33 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 55.91,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-4.4&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 372 mm/yr; RH = 60 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": {
+          "value": 22.5,
+          "uncertainty": 25,
+          "source": {
+            "id": "osm+macrostrat-caves",
+            "name": "OpenStreetMap cave entrances + Macrostrat geology",
+            "url": "https://www.openstreetmap.org/",
+            "note": "Geology-only proxy (carbonate / karst); OSM cave query unavailable or not run. Capability proxy, not a surveyed tube."
+          },
+          "measurementType": "cave_access_capability",
+          "unit": "index",
+          "caveCount": null,
+          "osmAvailable": false
+        }
+      },
+      "soilDesc": "Geology: carbonate / karst (45/100); sand fraction 47 %.",
+      "terrainDesc": "Local relief 104 m over a 9 km 3×3 sample; σ 33 m.",
+      "summary": "15.44 °C mean surface; 4.68 kWh/m²/day solar; water evidence class 1/3; soil proxy 45.72/100; relief proxy 10.4/100; cave access 22.5/100. Mapped geology: sandstone, conglomerate, clay; limestone and evaporites.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-4.4&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 8.9 °C."
+          },
+          "value": 15.44,
+          "unit": "°C",
+          "uncertainty": 2.22,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 8.9 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-4.4&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 4.68,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.51,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-4.4&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.8 cm, frost 41 d/yr, root-zone wetness 0.53."
+          },
+          "value": 26.57,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 1,
+          "note": "Moist ground or seasonal water present. Snow 0.8 cm, frost 41 d/yr, root-zone wetness 0.53."
+        },
+        {
+          "key": "soil",
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Geology: carbonate / karst (45/100); sand fraction 47 %."
+          },
+          "value": 45.72,
+          "unit": "index",
+          "uncertainty": 14,
+          "evidence_class": null,
+          "note": "Geology: carbonate / karst (45/100); sand fraction 47 %."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=39.9200%2C-4.4800%7C39.9200%2C-4.4000%7C39.9200%2C-4.3200%7C40.0000%2C-4.4800%7C40.0000%2C-4.4000%7C40.0000%2C-4.3200%7C40.0800%2C-4.4800%7C40.0800%2C-4.4000%7C40.0800%2C-4.3200",
+            "note": "Local relief 104 m over a 9 km 3×3 sample; σ 33 m."
+          },
+          "value": 10.4,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 104 m over a 9 km 3×3 sample; σ 33 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-4.4&latitude=40&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 372 mm/yr; RH = 60 %."
+          },
+          "value": 55.91,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 372 mm/yr; RH = 60 %."
+        },
+        {
+          "key": "tube",
+          "source": {
+            "id": "osm+macrostrat-caves",
+            "name": "OpenStreetMap cave entrances + Macrostrat geology",
+            "url": "https://www.openstreetmap.org/",
+            "note": "Geology-only proxy (carbonate / karst); OSM cave query unavailable or not run. Capability proxy, not a surveyed tube."
+          },
+          "value": 22.5,
+          "unit": "index",
+          "uncertainty": 25,
+          "evidence_class": null,
+          "note": "Geology-only proxy (carbonate / karst); OSM cave query unavailable or not run. Capability proxy, not a surveyed tube."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "soilgrids+macrostrat",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness",
+        "osm+macrostrat-caves"
+      ],
+      "screen": {
+        "provisional_score": 80,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 401,
+        "rough": 0.15,
+        "crater": 0.2643,
+        "pit": 0,
+        "ripple": 0.3318
+      }
+    },
+    {
+      "id": "earth-s20p0_e15p6",
+      "name": "Kamanjab",
+      "region": "Namibia",
+      "lat": -20,
+      "lon": 15.6,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "High",
+      "tags": [
+        "Validated cell",
+        "plutonic and metamorphic"
+      ],
+      "v": {
+        "temp": {
+          "value": 24.19,
+          "uncertainty": 1.12,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=15.6&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 4.5 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 6.41,
+          "uncertainty": 0.23,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=15.6&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 20.01,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=15.6&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.42."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 1,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": {
+          "value": 67.67,
+          "uncertainty": 28,
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Texture only: sand fraction 68 %. No mapped bedrock unit at this point."
+          },
+          "measurementType": "mafic_soil_proxy",
+          "unit": "index",
+          "geology": null,
+          "sandFraction": 0.6766766766766766
+        },
+        "terrain": {
+          "value": 5.9,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-20.0800%2C15.5200%7C-20.0800%2C15.6000%7C-20.0800%2C15.6800%7C-20.0000%2C15.5200%7C-20.0000%2C15.6000%7C-20.0000%2C15.6800%7C-19.9200%2C15.5200%7C-19.9200%2C15.6000%7C-19.9200%2C15.6800",
+            "note": "Local relief 59 m over a 9 km 3×3 sample; σ 21 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 60.39,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=15.6&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 409 mm/yr; RH = 37 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Texture only: sand fraction 68 %. No mapped bedrock unit at this point.",
+      "terrainDesc": "Local relief 59 m over a 9 km 3×3 sample; σ 21 m.",
+      "summary": "24.19 °C mean surface; 6.41 kWh/m²/day solar; water evidence class 1/3; soil proxy 67.67/100; relief proxy 5.9/100. Mapped geology: plutonic and metamorphic.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=15.6&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 4.5 °C."
+          },
+          "value": 24.19,
+          "unit": "°C",
+          "uncertainty": 1.12,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 4.5 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=15.6&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 6.41,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.23,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=15.6&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.42."
+          },
+          "value": 20.01,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 1,
+          "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.42."
+        },
+        {
+          "key": "soil",
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Texture only: sand fraction 68 %. No mapped bedrock unit at this point."
+          },
+          "value": 67.67,
+          "unit": "index",
+          "uncertainty": 28,
+          "evidence_class": null,
+          "note": "Texture only: sand fraction 68 %. No mapped bedrock unit at this point."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-20.0800%2C15.5200%7C-20.0800%2C15.6000%7C-20.0800%2C15.6800%7C-20.0000%2C15.5200%7C-20.0000%2C15.6000%7C-20.0000%2C15.6800%7C-19.9200%2C15.5200%7C-19.9200%2C15.6000%7C-19.9200%2C15.6800",
+            "note": "Local relief 59 m over a 9 km 3×3 sample; σ 21 m."
+          },
+          "value": 5.9,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 59 m over a 9 km 3×3 sample; σ 21 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=15.6&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 409 mm/yr; RH = 37 %."
+          },
+          "value": 60.39,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 409 mm/yr; RH = 37 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "soilgrids+macrostrat",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 76,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 307,
+        "rough": 0.15,
+        "crater": 0.319175,
+        "pit": 0,
+        "ripple": 0.47367367367367363
+      }
+    },
+    {
+      "id": "earth-s20p0_w70p0",
+      "name": "Huara",
+      "region": "Chile",
+      "lat": -20,
+      "lon": -70,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "High",
+      "tags": [
+        "Validated cell",
+        "Volcaniclastic, volcanic"
+      ],
+      "v": {
+        "temp": {
+          "value": 20.58,
+          "uncertainty": 0.8,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-70&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 3.1 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 7.04,
+          "uncertainty": 0.3,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-70&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 16.5,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-70&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.33."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 1,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": {
+          "value": 73.97,
+          "uncertainty": 14,
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Geology: volcanic rock (82/100); sand fraction 55 %."
+          },
+          "measurementType": "mafic_soil_proxy",
+          "unit": "index",
+          "geology": {
+            "score": 82,
+            "label": "volcanic rock",
+            "karst": false,
+            "unit": "Jurassic Volcano-sedimentary",
+            "lith": "Volcaniclastic, volcanic",
+            "age": "Jurassic"
+          },
+          "sandFraction": 0.5524475524475525
+        },
+        "terrain": {
+          "value": 80.8,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-20.0800%2C-70.0800%7C-20.0800%2C-70.0000%7C-20.0800%2C-69.9200%7C-20.0000%2C-70.0800%7C-20.0000%2C-70.0000%7C-20.0000%2C-69.9200%7C-19.9200%2C-70.0800%7C-19.9200%2C-70.0000%7C-19.9200%2C-69.9200",
+            "note": "Local relief 808 m over a 9 km 3×3 sample; σ 268 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 79.25,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-70&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 11 mm/yr; RH = 67 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": {
+          "value": 27.5,
+          "uncertainty": 25,
+          "source": {
+            "id": "osm+macrostrat-caves",
+            "name": "OpenStreetMap cave entrances + Macrostrat geology",
+            "url": "https://www.openstreetmap.org/",
+            "note": "Geology-only proxy (volcanic rock); OSM cave query unavailable or not run. Capability proxy, not a surveyed tube."
+          },
+          "measurementType": "cave_access_capability",
+          "unit": "index",
+          "caveCount": null,
+          "osmAvailable": false
+        }
+      },
+      "soilDesc": "Geology: volcanic rock (82/100); sand fraction 55 %.",
+      "terrainDesc": "Local relief 808 m over a 9 km 3×3 sample; σ 268 m.",
+      "summary": "20.58 °C mean surface; 7.04 kWh/m²/day solar; water evidence class 1/3; soil proxy 73.97/100; relief proxy 80.8/100; cave access 27.5/100. Mapped geology: Volcaniclastic, volcanic.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-70&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 3.1 °C."
+          },
+          "value": 20.58,
+          "unit": "°C",
+          "uncertainty": 0.8,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 3.1 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-70&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 7.04,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.3,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-70&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.33."
+          },
+          "value": 16.5,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 1,
+          "note": "Moist ground or seasonal water present. Snow 0.0 cm, frost 0 d/yr, root-zone wetness 0.33."
+        },
+        {
+          "key": "soil",
+          "source": {
+            "id": "soilgrids+macrostrat",
+            "name": "ISRIC SoilGrids 2.0 + Macrostrat geology",
+            "url": "https://soilgrids.org/",
+            "note": "Geology: volcanic rock (82/100); sand fraction 55 %."
+          },
+          "value": 73.97,
+          "unit": "index",
+          "uncertainty": 14,
+          "evidence_class": null,
+          "note": "Geology: volcanic rock (82/100); sand fraction 55 %."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-20.0800%2C-70.0800%7C-20.0800%2C-70.0000%7C-20.0800%2C-69.9200%7C-20.0000%2C-70.0800%7C-20.0000%2C-70.0000%7C-20.0000%2C-69.9200%7C-19.9200%2C-70.0800%7C-19.9200%2C-70.0000%7C-19.9200%2C-69.9200",
+            "note": "Local relief 808 m over a 9 km 3×3 sample; σ 268 m."
+          },
+          "value": 80.8,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 808 m over a 9 km 3×3 sample; σ 268 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=-70&latitude=-20&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 11 mm/yr; RH = 67 %."
+          },
+          "value": 79.25,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 11 mm/yr; RH = 67 %."
+        },
+        {
+          "key": "tube",
+          "source": {
+            "id": "osm+macrostrat-caves",
+            "name": "OpenStreetMap cave entrances + Macrostrat geology",
+            "url": "https://www.openstreetmap.org/",
+            "note": "Geology-only proxy (volcanic rock); OSM cave query unavailable or not run. Capability proxy, not a surveyed tube."
+          },
+          "value": 27.5,
+          "unit": "index",
+          "uncertainty": 25,
+          "evidence_class": null,
+          "note": "Geology-only proxy (volcanic rock); OSM cave query unavailable or not run. Capability proxy, not a surveyed tube."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "soilgrids+macrostrat",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness",
+        "osm+macrostrat-caves"
+      ],
+      "screen": {
+        "provisional_score": 80,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 332,
+        "rough": 0.8079999999999999,
+        "crater": 0.33492500000000003,
+        "pit": 0,
+        "ripple": 0.38671328671328675
+      }
+    },
+    {
+      "id": "earth-s80p0_e10p0",
+      "name": "New Swabia",
+      "region": "Antarctica",
+      "lat": -80,
+      "lon": 10,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "Medium",
+      "tags": [
+        "Screening cell"
+      ],
+      "v": {
+        "temp": {
+          "value": -45.34,
+          "uncertainty": 2.88,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 11.5 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 3.34,
+          "uncertainty": 0.98,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 25,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 3,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": null,
+        "terrain": {
+          "value": 0,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C9.9200%7C-80.0800%2C10.0000%7C-80.0800%2C10.0800%7C-80.0000%2C9.9200%7C-80.0000%2C10.0000%7C-80.0000%2C10.0800%7C-79.9200%2C9.9200%7C-79.9200%2C10.0000%7C-79.9200%2C10.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 69.35,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 44 mm/yr; RH = 92 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Soil proxy from mapped geology and texture",
+      "terrainDesc": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m.",
+      "summary": "-45.34 °C mean surface; 3.34 kWh/m²/day solar; water evidence class 3/3; relief proxy 0/100.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 11.5 °C."
+          },
+          "value": -45.34,
+          "unit": "°C",
+          "uncertainty": 2.88,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 11.5 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 3.34,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.98,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "value": 25,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 3,
+          "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C9.9200%7C-80.0800%2C10.0000%7C-80.0800%2C10.0800%7C-80.0000%2C9.9200%7C-80.0000%2C10.0000%7C-80.0000%2C10.0800%7C-79.9200%2C9.9200%7C-79.9200%2C10.0000%7C-79.9200%2C10.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "value": 0,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=10&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 44 mm/yr; RH = 92 %."
+          },
+          "value": 69.35,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 44 mm/yr; RH = 92 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 76,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 601,
+        "rough": 0.15,
+        "crater": 0.15,
+        "pit": 0,
+        "ripple": 0.27999999999999997
+      }
+    },
+    {
+      "id": "earth-s80p0_e110p0",
+      "name": "Australian Antarctic Territory",
+      "region": "80.0°S 110.0°E",
+      "lat": -80,
+      "lon": 110,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "Medium",
+      "tags": [
+        "Screening cell"
+      ],
+      "v": {
+        "temp": {
+          "value": -54.43,
+          "uncertainty": 3.26,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=110&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 13.0 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 3.41,
+          "uncertainty": 1.01,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=110&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 25,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=110&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 3,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": null,
+        "terrain": {
+          "value": 0,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C109.9200%7C-80.0800%2C110.0000%7C-80.0800%2C110.0800%7C-80.0000%2C109.9200%7C-80.0000%2C110.0000%7C-80.0000%2C110.0800%7C-79.9200%2C109.9200%7C-79.9200%2C110.0000%7C-79.9200%2C110.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 73.65,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=110&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 22 mm/yr; RH = 83 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Soil proxy from mapped geology and texture",
+      "terrainDesc": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m.",
+      "summary": "-54.43 °C mean surface; 3.41 kWh/m²/day solar; water evidence class 3/3; relief proxy 0/100.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=110&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 13.0 °C."
+          },
+          "value": -54.43,
+          "unit": "°C",
+          "uncertainty": 3.26,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 13.0 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=110&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 3.41,
+          "unit": "kWh/m²/day",
+          "uncertainty": 1.01,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=110&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "value": 25,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 3,
+          "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C109.9200%7C-80.0800%2C110.0000%7C-80.0800%2C110.0800%7C-80.0000%2C109.9200%7C-80.0000%2C110.0000%7C-80.0000%2C110.0800%7C-79.9200%2C109.9200%7C-79.9200%2C110.0000%7C-79.9200%2C110.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "value": 0,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=110&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 22 mm/yr; RH = 83 %."
+          },
+          "value": 73.65,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 22 mm/yr; RH = 83 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 77,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 538,
+        "rough": 0.15,
+        "crater": 0.15,
+        "pit": 0,
+        "ripple": 0.27999999999999997
+      }
+    },
+    {
+      "id": "earth-s80p0_e130p0",
+      "name": "Australian Antarctic Territory",
+      "region": "Antarctica",
+      "lat": -80,
+      "lon": 130,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "Medium",
+      "tags": [
+        "Screening cell"
+      ],
+      "v": {
+        "temp": {
+          "value": -49.9,
+          "uncertainty": 3.07,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=130&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 12.3 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 3.38,
+          "uncertainty": 1,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=130&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 25,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=130&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 3,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": null,
+        "terrain": {
+          "value": 0,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C129.9200%7C-80.0800%2C130.0000%7C-80.0800%2C130.0800%7C-80.0000%2C129.9200%7C-80.0000%2C130.0000%7C-80.0000%2C130.0800%7C-79.9200%2C129.9200%7C-79.9200%2C130.0000%7C-79.9200%2C130.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 72.03,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=130&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 26 mm/yr; RH = 87 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Soil proxy from mapped geology and texture",
+      "terrainDesc": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m.",
+      "summary": "-49.9 °C mean surface; 3.38 kWh/m²/day solar; water evidence class 3/3; relief proxy 0/100.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=130&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 12.3 °C."
+          },
+          "value": -49.9,
+          "unit": "°C",
+          "uncertainty": 3.07,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 12.3 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=130&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 3.38,
+          "unit": "kWh/m²/day",
+          "uncertainty": 1,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=130&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "value": 25,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 3,
+          "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C129.9200%7C-80.0800%2C130.0000%7C-80.0800%2C130.0800%7C-80.0000%2C129.9200%7C-80.0000%2C130.0000%7C-80.0000%2C130.0800%7C-79.9200%2C129.9200%7C-79.9200%2C130.0000%7C-79.9200%2C130.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "value": 0,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=130&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 26 mm/yr; RH = 87 %."
+          },
+          "value": 72.03,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 26 mm/yr; RH = 87 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 77,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 760,
+        "rough": 0.15,
+        "crater": 0.15,
+        "pit": 0,
+        "ripple": 0.27999999999999997
+      }
+    },
+    {
+      "id": "earth-s80p0_e30p0",
+      "name": "Queen Maud Land",
+      "region": "80.0°S 30.0°E",
+      "lat": -80,
+      "lon": 30,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "Medium",
+      "tags": [
+        "Screening cell"
+      ],
+      "v": {
+        "temp": {
+          "value": -53.1,
+          "uncertainty": 3.28,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=30&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 13.1 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 3.39,
+          "uncertainty": 1,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=30&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 25,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=30&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 3,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": null,
+        "terrain": {
+          "value": 0,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C29.9200%7C-80.0800%2C30.0000%7C-80.0800%2C30.0800%7C-80.0000%2C29.9200%7C-80.0000%2C30.0000%7C-80.0000%2C30.0800%7C-79.9200%2C29.9200%7C-79.9200%2C30.0000%7C-79.9200%2C30.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 71.44,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=30&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 33 mm/yr; RH = 88 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Soil proxy from mapped geology and texture",
+      "terrainDesc": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m.",
+      "summary": "-53.1 °C mean surface; 3.39 kWh/m²/day solar; water evidence class 3/3; relief proxy 0/100.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=30&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 13.1 °C."
+          },
+          "value": -53.1,
+          "unit": "°C",
+          "uncertainty": 3.28,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 13.1 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=30&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 3.39,
+          "unit": "kWh/m²/day",
+          "uncertainty": 1,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=30&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "value": 25,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 3,
+          "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C29.9200%7C-80.0800%2C30.0000%7C-80.0800%2C30.0800%7C-80.0000%2C29.9200%7C-80.0000%2C30.0000%7C-80.0000%2C30.0800%7C-79.9200%2C29.9200%7C-79.9200%2C30.0000%7C-79.9200%2C30.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "value": 0,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=30&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 33 mm/yr; RH = 88 %."
+          },
+          "value": 71.44,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 33 mm/yr; RH = 88 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 77,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 450,
+        "rough": 0.15,
+        "crater": 0.15,
+        "pit": 0,
+        "ripple": 0.27999999999999997
+      }
+    },
+    {
+      "id": "earth-s80p0_e50p0",
+      "name": "Australian Antarctic Territory",
+      "region": "80.0°S 50.0°E",
+      "lat": -80,
+      "lon": 50,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "Medium",
+      "tags": [
+        "Screening cell"
+      ],
+      "v": {
+        "temp": {
+          "value": -59.17,
+          "uncertainty": 3.62,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=50&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 14.5 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 3.23,
+          "uncertainty": 0.95,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=50&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 25,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=50&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 3,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": null,
+        "terrain": {
+          "value": 0,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C49.9200%7C-80.0800%2C50.0000%7C-80.0800%2C50.0800%7C-80.0000%2C49.9200%7C-80.0000%2C50.0000%7C-80.0000%2C50.0800%7C-79.9200%2C49.9200%7C-79.9200%2C50.0000%7C-79.9200%2C50.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 70.16,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=50&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 22 mm/yr; RH = 94 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Soil proxy from mapped geology and texture",
+      "terrainDesc": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m.",
+      "summary": "-59.17 °C mean surface; 3.23 kWh/m²/day solar; water evidence class 3/3; relief proxy 0/100.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=50&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 14.5 °C."
+          },
+          "value": -59.17,
+          "unit": "°C",
+          "uncertainty": 3.62,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 14.5 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=50&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 3.23,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.95,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=50&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "value": 25,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 3,
+          "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C49.9200%7C-80.0800%2C50.0000%7C-80.0800%2C50.0800%7C-80.0000%2C49.9200%7C-80.0000%2C50.0000%7C-80.0000%2C50.0800%7C-79.9200%2C49.9200%7C-79.9200%2C50.0000%7C-79.9200%2C50.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "value": 0,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=50&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 22 mm/yr; RH = 94 %."
+          },
+          "value": 70.16,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 22 mm/yr; RH = 94 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 75,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 367,
+        "rough": 0.15,
+        "crater": 0.15,
+        "pit": 0,
+        "ripple": 0.27999999999999997
+      }
+    },
+    {
+      "id": "earth-s80p0_e70p0",
+      "name": "Australian Antarctic Territory",
+      "region": "80.0°S 70.0°E",
+      "lat": -80,
+      "lon": 70,
+      "cellDegrees": 20,
+      "discovered": true,
+      "conf": "Medium",
+      "tags": [
+        "Screening cell"
+      ],
+      "v": {
+        "temp": {
+          "value": -56.17,
+          "uncertainty": 3.15,
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=70&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 12.6 °C."
+          },
+          "measurementType": "annual_mean_surface_temperature",
+          "unit": "°C"
+        },
+        "solar": {
+          "value": 3.2,
+          "uncertainty": 0.96,
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=70&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "measurementType": "annual_mean_surface_shortwave",
+          "unit": "kWh/m²/day"
+        },
+        "ice": {
+          "value": 25,
+          "uncertainty": 8,
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=70&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "measurementType": "water_ice_evidence",
+          "unit": "index",
+          "evidenceClass": 3,
+          "evidenceClassUncertainty": 0.4
+        },
+        "soil": null,
+        "terrain": {
+          "value": 0,
+          "uncertainty": 10,
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C69.9200%7C-80.0800%2C70.0000%7C-80.0800%2C70.0800%7C-80.0000%2C69.9200%7C-80.0000%2C70.0000%7C-80.0000%2C70.0800%7C-79.9200%2C69.9200%7C-79.9200%2C70.0000%7C-79.9200%2C70.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "measurementType": "local_relief_proxy",
+          "unit": "index"
+        },
+        "dry": {
+          "value": 69.21,
+          "uncertainty": 6,
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=70&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 29 mm/yr; RH = 96 %."
+          },
+          "measurementType": "aridity_proxy",
+          "unit": "index"
+        },
+        "tube": null
+      },
+      "soilDesc": "Soil proxy from mapped geology and texture",
+      "terrainDesc": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m.",
+      "summary": "-56.17 °C mean surface; 3.2 kWh/m²/day solar; water evidence class 3/3; relief proxy 0/100.",
+      "limitations": [
+        "Screening cell is 20° wide; local microclimate and terrain can differ from the cell centre.",
+        "No OSM cave query was run for this cell; tube capability is a geology-only proxy.",
+        "Earth gravity, vacuum, radiation and magnetic field are not reproduced anywhere on Earth."
+      ],
+      "provenance": [
+        {
+          "key": "temp",
+          "source": {
+            "id": "nasa-power-ts",
+            "name": "NASA POWER MERRA-2 Earth skin temperature",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=70&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean; monthly spread 12.6 °C."
+          },
+          "value": -56.17,
+          "unit": "°C",
+          "uncertainty": 3.15,
+          "evidence_class": null,
+          "note": "Annual mean; monthly spread 12.6 °C."
+        },
+        {
+          "key": "solar",
+          "source": {
+            "id": "nasa-power-solar",
+            "name": "NASA POWER all-sky surface shortwave irradiance",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=70&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Annual mean of monthly means."
+          },
+          "value": 3.2,
+          "unit": "kWh/m²/day",
+          "uncertainty": 0.96,
+          "evidence_class": null,
+          "note": "Annual mean of monthly means."
+        },
+        {
+          "key": "ice",
+          "source": {
+            "id": "nasa-power-water",
+            "name": "NASA POWER snow depth, frost days and soil wetness",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=70&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+          },
+          "value": 25,
+          "unit": "index",
+          "uncertainty": 8,
+          "evidence_class": 3,
+          "note": "Persistent snow, ice or permafrost signature. Snow 0.0 cm, frost 365 d/yr, root-zone wetness 0.00."
+        },
+        {
+          "key": "terrain",
+          "source": {
+            "id": "opentopodata-srtm90m",
+            "name": "OpenTopoData / NASA SRTM 90 m",
+            "url": "https://api.opentopodata.org/v1/srtm90m?locations=-80.0800%2C69.9200%7C-80.0800%2C70.0000%7C-80.0800%2C70.0800%7C-80.0000%2C69.9200%7C-80.0000%2C70.0000%7C-80.0000%2C70.0800%7C-79.9200%2C69.9200%7C-79.9200%2C70.0000%7C-79.9200%2C70.0800",
+            "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+          },
+          "value": 0,
+          "unit": "index",
+          "uncertainty": 10,
+          "evidence_class": null,
+          "note": "Local relief 0 m over a 9 km 3×3 sample; σ 0 m."
+        },
+        {
+          "key": "dry",
+          "source": {
+            "id": "nasa-power-dryness",
+            "name": "NASA POWER precipitation + relative humidity",
+            "url": "https://power.larc.nasa.gov/api/temporal/climatology/point?parameters=TS%2CT2M%2CT2M_MIN%2CT2M_MAX%2CPRECTOTCORR%2CRH2M%2CALLSKY_SFC_SW_DWN%2CGWETROOT%2CGWETPROF%2CSNODP%2CFROST_DAYS%2CWS2M%2CPS&community=RE&longitude=70&latitude=-80&format=JSON",
+            "period": "2001-2025",
+            "note": "P = 29 mm/yr; RH = 96 %."
+          },
+          "value": 69.21,
+          "unit": "index",
+          "uncertainty": 6,
+          "evidence_class": null,
+          "note": "P = 29 mm/yr; RH = 96 %."
+        }
+      ],
+      "sourceIds": [
+        "nasa-power-ts",
+        "nasa-power-solar",
+        "nasa-power-water",
+        "opentopodata-srtm90m",
+        "nasa-power-dryness"
+      ],
+      "screen": {
+        "provisional_score": 76,
+        "provisional_scope": "climate-only screening before terrain, soil and geology validation",
+        "selected_for_targets": [
+          "jezero"
+        ],
+        "reason": "climate screening + per-feature coverage"
+      },
+      "tp": {
+        "seed": 894,
+        "rough": 0.15,
+        "crater": 0.15,
+        "pit": 0,
+        "ripple": 0.27999999999999997
+      }
+    }
+  ]
+}

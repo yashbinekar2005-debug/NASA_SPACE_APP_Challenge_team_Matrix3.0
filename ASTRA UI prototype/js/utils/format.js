@@ -16,15 +16,40 @@ function numeric(value) {
 
 /**
  * Format a factor value for display.
- * Temperatures are real °C; every other factor is a 0–100 index.
- * Missing values are shown explicitly instead of becoming zero.
+ * Temperature is °C and solar irradiance is kWh/m²/day; every other factor is
+ * a 0–100 index. Missing values are shown explicitly instead of becoming zero.
  */
 export function fmt(key, value) {
   const number = numeric(value);
   if (number == null) return 'no data';
-  return key === 'temp'
-    ? (number < 0 ? MINUS : '') + Math.abs(number) + ' °C'
-    : number + ' / 100';
+  if (key === 'temp') {
+    return (number < 0 ? MINUS : '') + Math.abs(number) + ' °C';
+  }
+  if (key === 'solar') {
+    return (number < 0 ? MINUS : '') + Math.abs(number).toFixed(1) + ' kWh/m²/day';
+  }
+  return number + ' / 100';
+}
+
+/** Uncertainty in the same unit as the factor. */
+export function fmtUncertainty(key, measurement) {
+  const sigma = typeof measurement === 'number'
+    ? measurement
+    : measurement && typeof measurement.uncertainty === 'number'
+      ? measurement.uncertainty
+      : null;
+  if (sigma == null || !Number.isFinite(sigma)) return '';
+  if (key === 'temp') return '±' + sigma + ' °C';
+  if (key === 'solar') return '±' + sigma.toFixed(1) + ' kWh/m²/day';
+  return '±' + sigma + ' index';
+}
+
+/** Coordinates in a compact, copy-paste friendly form. */
+export function fmtCoords(lat, lon) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+  const ns = lat >= 0 ? 'N' : 'S';
+  const ew = lon >= 0 ? 'E' : 'W';
+  return Math.abs(lat).toFixed(1) + '°' + ns + ' ' + Math.abs(lon).toFixed(1) + '°' + ew;
 }
 
 /** Round a score and append a percent sign. */
