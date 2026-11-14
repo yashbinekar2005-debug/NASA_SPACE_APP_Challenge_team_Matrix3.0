@@ -35,7 +35,17 @@ import { ANALOGS, DISCOVERY, FACTORS, PRESETS, TARGETS, nonReplicableFor } from 
 import { fmt, fmtCoords, fmtUncertainty } from '../js/utils/format.js';
 import { state, curTarget } from '../js/core/state.js';
 import { project, unproject } from '../js/graphics/globe.js';
-import { rankMeasuredMarsPoint, validateMarsPointResponse } from '../js/core/research.js';
+import { rankMeasuredMarsPoint, validateMarsPointResponse, rankMeasuredEarthPoint, validateEarthPointResponse, rankMeasuredPoint, validatePointProbe } from '../js/core/research.js';
+import {
+  marsDryness,
+  marsGeologyProxy,
+  marsIceEvidence,
+  mcdColumn,
+  moonFeoProxy,
+  moonSolarEstimate,
+  polarXY,
+  reliefIndex
+} from '../tools/lib/planetary-probe.mjs';
 import { parseMcdSeries, summarizeMcdSeries } from '../tools/lib/sources/mcd.mjs';
 
 /* ----------------------------- fixtures ----------------------------- */
@@ -667,4 +677,224 @@ test('display formatting handles real units and missing values', () => {
   assert.equal(fmtUncertainty('temp', { uncertainty: 18 }), '±18 °C');
   assert.equal(fmtUncertainty('solar', { uncertainty: 0.6 }), '±0.6 kWh/m²/day');
   assert.equal(fmtCoords(-20, -70), '20.0°S 70.0°W');
+});
+
+/* ------------------------------------------------------------------ */
+/* Planetary point-probe derivations and scientific-data gates          */
+/* ------------------------------------------------------------------ */
+
+const source = (id, name, url = 'https://trek.nasa.gov/moon/') => ({
+  id, name, url, period: 'Mission product', resolution: 'Mapped product', evidenceType: 'remote_sensing'
+});
+
+function moonProbe() {
+  const dem = source('lro-lola-dem-256ppd', 'LRO LOLA DEM');
+  const diviner = source('lro-diviner-hourly', 'LRO Diviner');
+  const feo = source('kaguya-mi-feo', 'Kaguya MI FeO');
+  const solar = source('nasa-moon-solar-constant', 'NASA Moon Fact Sheet solar constant');
+  const vacuum = source('nasa-moon-fact-sheet', 'NASA Moon Fact Sheet');
+  const values = {
+    temp: { value: -64.57, uncertainty: 5, unit: '°C', source: diviner },
+    solar: { value: 10.398, uncertainty: 2.6, unit: 'kWh/m²/day', source: solar },
+    dry: { value: 100, uncertainty: 0, unit: 'index', source: vacuum },
+    soil: { value: 76.7, uncertainty: 8, unit: 'index', source: feo },
+    terrain: { value: 14.4, uncertainty: 15, unit: 'index', source: dem, elevationM: -720.5, reliefM: 144 },
+    ice: null
+  };
+  return {
+    schema: 'astra.planetary-probe/1',
+    body: 'moon',
+    lat: 0,
+    lon: 0,
+    dataset: 'NASA Moon Trek point probe',
+    source: { id: 'astra-moon-point-probe', name: 'NASA Moon Trek', url: 'https://trek.nasa.gov/moon/', period: 'Mission products', resolution: 'Mapped', evidenceType: 'remote_sensing' },
+    sources: [dem, diviner, feo, solar, vacuum],
+    values,
+    completeness: {
+      temp: '8/8 local-hour samples',
+      solar: 'geometric estimate',
+      dry: 'reference value',
+      soil: 'single mapped pixel',
+      terrain: '9/9 DEM samples',
+      ice: 'not queried: no reliable global lunar volatile point product connected',
+      tube: 'not available: no global mapped cave/tube point product'
+    },
+    warnings: ['No global lunar volatile/ice point product is connected.'],
+    presentFeatures: Object.entries(values).filter(([, value]) => value && Number.isFinite(value.value)).map(([key]) => key),
+    retrievedAt: '2026-11-15T00:00:00.000Z'
+  };
+}
+
+function marsProbe() {
+  const mola = source('mars-mola-128-64', 'Mars MOLA DEM', 'https://trek.nasa.gov/mars/');
+  const geology = source('usgs-sim3292-geology', 'USGS SIM3292 geology', 'https://trek.nasa.gov/mars/');
+  const mcd = source('mars-climate-database-6.2', 'Mars Climate Database v6.2', 'https://www-mars.lmd.jussieu.fr/mars/access');
+  const mcdSolar = source('mars-climate-database-solar', 'MCD surface solar flux', 'https://www-mars.lmd.jussieu.fr/mars/access');
+  const mcdWater = source('mars-climate-database-water', 'MCD surface H2O layer', 'https://www-mars.lmd.jussieu.fr/mars/access');
+  const mcdVapour = source('mars-climate-database-vapour', 'MCD water-vapour column', 'https://www-mars.lmd.jussieu.fr/mars/access');
+  const values = {
+    temp: { value: -2.51, uncertainty: 2.36, unit: '°C', source: mcd },
+    solar: { value: 11.597, uncertainty: 0.34, unit: 'kWh/m²/day', source: mcdSolar },
+    pressureKpa: { value: 0.728, uncertainty: 0.019, unit: 'kPa', source: mcd },
+    ice: { value: 0, uncertainty: 8, unit: 'index', source: mcdWater },
+    dry: { value: 93.5, uncertainty: 5, unit: 'index', source: mcdVapour },
+    soil: { value: 55, uncertainty: 25, unit: 'index', source: geology },
+    terrain: { value: 16.2, uncertainty: 15, unit: 'index', source: mola, elevationM: -2645, reliefM: 162 }
+  };
+  return {
+    schema: 'astra.planetary-probe/1',
+    body: 'mars',
+    lat: 18.38,
+    lon: 77.58,
+    dataset: 'NASA Mars Trek + Mars Climate Database point probe',
+    source: { id: 'astra-mars-point-probe', name: 'NASA Mars Trek + MCD', url: 'https://trek.nasa.gov/mars/', period: 'MOLA/SIM3292 mission maps; MCD v6.2 climatology', resolution: 'DEM 128/64 ppd; global geologic units; MCD model grid', evidenceType: 'remote_sensing_and_modelled_climatology' },
+    sources: [mola, geology, mcd, mcdSolar, mcdWater, mcdVapour],
+    values,
+    completeness: {
+      temp: '25/25 seasonal samples',
+      solar: '25/25 seasonal samples',
+      pressure: '25/25 seasonal samples',
+      ice: '25 seasonal samples',
+      dry: '25 seasonal samples',
+      soil: 'single mapped polygon',
+      terrain: '9/9 DEM samples',
+      tube: 'not available: no global mapped cave/tube point product'
+    },
+    warnings: ['MCD is a model climatology, not a direct surface station measurement.'],
+    presentFeatures: Object.entries(values).filter(([, value]) => value && Number.isFinite(value.value)).map(([key]) => key),
+    retrievedAt: '2026-11-15T00:00:00.000Z'
+  };
+}
+
+test('relief, illumination and composition helpers are transparent derivations', () => {
+  assert.equal(reliefIndex([1, 2, 3, 4]), null);
+  const relief = reliefIndex([0, 900, 0, 0, 0, 0, 0, 0, 0]);
+  assert.equal(relief.value, 90);
+  assert.equal(relief.reliefM, 900);
+  assert.equal(relief.count, 9);
+  assert.ok(Math.abs(relief.stdDevM - 282.8) < 0.1);
+
+  assert.equal(moonSolarEstimate(0).value, 10.398);
+  assert.equal(moonSolarEstimate(90).value, 0);
+  assert.equal(moonSolarEstimate(NaN), null);
+
+  assert.ok(Math.abs(moonFeoProxy(5.76154).value - 28.8) < 0.1);
+  assert.ok(Math.abs(moonFeoProxy(19.63).value - 98.1) < 0.2);
+  assert.equal(moonFeoProxy(50), null);
+
+  assert.equal(marsGeologyProxy('Ah', 'Amazonian volcanic flow').value, 92);
+  assert.equal(marsGeologyProxy('HNt', 'Cratered highland terrain').value, 55);
+  assert.equal(marsGeologyProxy('Api', 'polar ice and frost').value, 15);
+  assert.equal(marsGeologyProxy('Xyz', 'undivided material').value, 45);
+  assert.equal(marsGeologyProxy('', ''), null);
+});
+
+test('water and aridity helpers keep units and evidence classes explicit', () => {
+  const wet = marsIceEvidence(6.8, 7.0);
+  assert.equal(wet.value, 100);
+  assert.equal(wet.evidenceClass, 3);
+  const trace = marsIceEvidence(0.01, 0.02);
+  assert.ok(trace.value < 1);
+  assert.equal(trace.evidenceClass, 0);
+  assert.equal(marsIceEvidence(-1), null);
+
+  assert.equal(marsDryness(0.2).value, 0);
+  assert.ok(Math.abs(marsDryness(0.0129).value - 93.5) < 0.1);
+  assert.equal(marsDryness(-0.1), null);
+
+  assert.equal(mcdColumn({ 'Surface temperature (K)': [{ coordinate: 0, value: 210 }] }, /surface temperature/i).length, 1);
+  assert.equal(mcdColumn({ 'Surface temperature (K)': [] }, /pressure/i), null);
+});
+
+test('polar stereographic coordinates round-trip the sign convention', () => {
+  const north = polarXY(85, 0);
+  assert.equal(north.wkid, 0);
+  assert.ok(Math.abs(north.x) < 1e-9);
+  assert.ok(Math.abs(north.y + 151713.04) < 0.1);
+  const south = polarXY(-85, 0);
+  assert.ok(Math.abs(south.y - 151713.04) < 0.1);
+  assert.equal(polarXY(NaN, 0), null);
+});
+
+test('Moon and Mars probes pass the provenance and range gates', () => {
+  const moon = moonProbe();
+  const moonCheck = validatePointProbe(moon, 'moon');
+  assert.equal(moonCheck.valid, true, moonCheck.errors.join('; '));
+
+  const mars = marsProbe();
+  const marsCheck = validatePointProbe(mars, 'mars');
+  assert.equal(marsCheck.valid, true, marsCheck.errors.join('; '));
+});
+
+test('probe validation rejects out-of-range, unprovenanced and under-sampled values', () => {
+  const outOfRange = moonProbe();
+  outOfRange.values.temp.value = 500;
+  assert.equal(validatePointProbe(outOfRange, 'moon').valid, false);
+
+  const noSources = moonProbe();
+  noSources.sources = [];
+  assert.equal(validatePointProbe(noSources, 'moon').valid, false);
+
+  const invented = moonProbe();
+  invented.values.magic = { value: 1, uncertainty: 0, unit: 'index', source: invented.sources[0] };
+  assert.equal(validatePointProbe(invented, 'moon').valid, false);
+
+  const underSampled = marsProbe();
+  underSampled.completeness.temp = '2/25 seasonal samples';
+  assert.equal(validatePointProbe(underSampled, 'mars').valid, false);
+
+  const presentButUnavailable = moonProbe();
+  presentButUnavailable.completeness.temp = 'unavailable';
+  assert.equal(validatePointProbe(presentButUnavailable, 'moon').valid, false);
+});
+
+test('only a fresh, validated Moon or Mars probe can be ranked', () => {
+  const payload = moonProbe();
+  const target = {
+    id: 'picked-moon-0-0', body: 'moon', custom: true, lat: 0, lon: 0,
+    measurementStatus: 'validated', measurements: payload,
+    v: Object.fromEntries(Object.entries(payload.values).filter(([, value]) => value && Number.isFinite(value.value)))
+  };
+  const ranked = rankMeasuredPoint(target, ANALOGS, PRESETS[0].w);
+  assert.ok(ranked.length > 0);
+  assert.equal(ranked[0].targetId, target.id);
+  assert.ok(ranked[0].matchedFeatures.includes('temp'));
+  assert.ok(ranked[0].matchedFeatures.includes('terrain'));
+
+  assert.deepEqual(rankMeasuredPoint({ ...target, measurementStatus: 'loading' }, ANALOGS, PRESETS[0].w), []);
+  assert.deepEqual(rankMeasuredPoint({ ...target, body: 'earth' }, ANALOGS, PRESETS[0].w), []);
+  assert.deepEqual(rankMeasuredPoint({ ...target, lat: 1 }, ANALOGS, PRESETS[0].w), []);
+  assert.deepEqual(rankMeasuredPoint({ ...target, v: { ...target.v, temp: { value: -10 } } }, ANALOGS, PRESETS[0].w), []);
+});
+
+test('Earth coordinate scores require current validated NASA POWER observations', () => {
+  const root = 'https://power.larc.nasa.gov/';
+  const ref = 'https://power.larc.nasa.gov/api/temporal/climatology/point?latitude=12&longitude=34';
+  const measured = (value, id, unit) => ({ value, uncertainty: 1, unit, source: { id, url: ref } });
+  const payload = {
+    dataset: 'NASA POWER / MERRA-2',
+    retrievedAt: new Date().toISOString(),
+    coordinate: { latitude: 12, longitude: 34 },
+    source: { name: 'NASA POWER / MERRA-2 climatology', url: root, reference: ref, observationPeriod: '2001-2025', resolution: 'Approximately 0.5° native model grid; coordinate values are grid-resampled.' },
+    features: {
+      temp: measured(18, 'nasa-power-ts', '°C'),
+      solar: measured(4.5, 'nasa-power-solar', 'kWh/m²/day'),
+      ice: measured(0, 'nasa-power-water', 'index'),
+      dry: measured(45, 'nasa-power-dryness', 'index'),
+      soil: null, terrain: null, tube: null
+    },
+    completeness: { temp: 'measured', solar: 'measured', ice: 'measured', dry: 'measured', soil: 'unavailable', terrain: 'unavailable', tube: 'unavailable' }
+  };
+  const point = {
+    id: 'picked-earth-12-34', body: 'earth', custom: true, lat: 12, lon: 34,
+    measurementStatus: 'validated', measurements: payload, v: payload.features
+  };
+  assert.equal(validateEarthPointResponse(payload, 12, 34).valid, true);
+  assert.ok(rankMeasuredEarthPoint(TARGETS[0], point, PRESETS[0].w).length > 0);
+  assert.deepEqual(rankMeasuredEarthPoint(TARGETS[0], { ...point, lon: 35 }, PRESETS[0].w), []);
+  assert.deepEqual(rankMeasuredEarthPoint(TARGETS[0], { ...point, v: { ...point.v, temp: measured(19, 'nasa-power-ts', '°C') } }, PRESETS[0].w), []);
+  const incomplete = structuredClone(payload);
+  incomplete.completeness.temp = 'unavailable';
+  assert.equal(validateEarthPointResponse(incomplete, 12, 34).valid, false);
+  assert.deepEqual(rankMeasuredEarthPoint(TARGETS[0], { ...point, measurements: incomplete }, PRESETS[0].w), []);
 });

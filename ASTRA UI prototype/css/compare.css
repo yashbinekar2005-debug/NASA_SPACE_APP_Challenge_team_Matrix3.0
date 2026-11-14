@@ -48,6 +48,8 @@
 }
 
 .terrain{width:100%;height:230px;display:block;border-radius:8px;background:#080B14;border:1px solid var(--line);cursor:grab;touch-action:pan-y}
+.dem-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;height:230px;padding:3px;border:1px solid var(--line);border-radius:8px;background:#080B14}
+.dem-grid span{display:grid;place-items:center;min-width:0;border-radius:4px;font-family:var(--font-mono);font-size:10.5px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}
 .cap{color:var(--faint);font-size:11.5px;margin:6px 0 14px}
 
 .facts{margin:0 0 14px;display:grid;gap:0}
@@ -129,6 +131,8 @@
 .prov li{overflow-wrap:anywhere}
 .prov li b{color:var(--fg);font-weight:500}
 .prov li span{display:block;color:var(--faint);font-size:11px;margin-top:1px}
+.prov li.missing{color:var(--faint)}
+.prov-count{color:var(--faint);font-size:11px;margin-left:4px}
 .prov a{color:var(--accent);text-decoration:none;border-bottom:1px dotted currentColor}
 
 /* Non-replicable differences */

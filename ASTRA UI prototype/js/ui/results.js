@@ -1,7 +1,7 @@
 import { $ } from '../utils/dom.js';
 import { state, curTarget } from '../core/state.js';
 import { fmtCoords } from '../utils/format.js';
-import { DISCOVERY } from '../data/index.js';
+import { DISCOVERY, FACTORS } from '../data/index.js';
 
 /**
  * Right column: ranked match list and the selected-pair bar.
@@ -28,6 +28,17 @@ function certaintyHtml(r) {
   return `<span class="cert" title="${title}">±${Math.round(sigma)} pts</span>`;
 }
 
+const bodyLabel = (body) => body === 'mars' ? 'Mars' : body === 'moon' ? 'Moon' : 'planetary';
+
+/** Number of scoring factors actually measured, not the number of placeholders. */
+function presentCount(target) {
+  const values = target?.measurements?.values || {};
+  const keys = new Set(FACTORS.map((factor) => factor.k));
+  return Object.entries(values)
+    .filter(([key, value]) => keys.has(key) && value && Number.isFinite(value.value))
+    .length;
+}
+
 export function renderResults() {
   const target = curTarget();
   const earthPoint = state.customEarthPoint;
@@ -43,20 +54,22 @@ export function renderResults() {
     const n = DISCOVERY.candidates.length;
     meta.textContent = target?.custom
       ? target.measurementStatus === 'loading'
-        ? 'Retrieving coordinate-specific Mars climate data before comparing candidates…'
+        ? `Retrieving coordinate-specific ${bodyLabel(target.body)} measurements before comparing candidates…`
         : target.measurementStatus === 'validated'
           ? state.ranked.length
-            ? `${target.measurements.source.name}; ${target.measurements.source.period}. Ranked against ${DISCOVERY.candidates.length} measured Earth cells from the current ${DISCOVERY.grid.stepDegrees}° discovery snapshot using current weights; this is not an exhaustive Earth grid. Planetary differences are reported separately.`
+            ? `${target.measurements.source.name}; ${target.measurements.source.period}. ${presentCount(target)} of 7 factors available; ranked against ${DISCOVERY.candidates.length} measured Earth cells from the current ${DISCOVERY.grid.stepDegrees}° discovery snapshot using current weights. This is not an exhaustive Earth grid, and planetary differences are reported separately.`
             : 'No scientifically supportable candidate regions were identified from the currently available datasets.'
           : state.researchError || 'No validated planetary measurements are available for this coordinate.'
       : earthPoint
-        ? 'Select a Mars point to compare against Earth analogs. Earth measurements for this point have not been retrieved.'
+        ? earthPoint.measurementStatus === 'validated'
+          ? `NASA POWER / MERRA-2 ${earthPoint.measurements.source.period} at the selected coordinate; ranking only against the currently selected planetary target and using shared measured parameters.`
+          : state.researchError || 'Retrieving coordinate-specific NASA POWER measurements before comparison…'
       : target
         ? `${n} measured Earth cells from the discovery snapshot (${DISCOVERY.generatedAt || 'date unavailable'}); scores recalculated for this target and current weights.`
         : 'Select a measured target on the left or its pin, or click a coordinate on either globe.';
   }
 
-  $('#resultList').innerHTML = target && (!target.custom || target.measurementStatus === 'validated') && !earthPoint ? state.ranked.slice(0, 6).map((r, i) => {
+  $('#resultList').innerHTML = target && (!target.custom || target.measurementStatus === 'validated') ? state.ranked.slice(0, 6).map((r, i) => {
     const coverage = Math.round((r.coverage ?? 0) * 100);
     const confidence = Math.round(r.confidence ?? 0);
     const provisional = r.status && r.status !== 'ok' ? ' · provisional' : '';
@@ -80,7 +93,7 @@ export function updatePair() {
   const r = state.ranked.find((x) => x.analog.id === state.analogId);
   if (!r || !t) {
     $('#pairNames').textContent = t?.custom
-      ? `${t.name} · ${t.measurementStatus === 'loading' ? 'retrieving planetary data�' : 'planetary data unavailable'}`
+      ? `${t.name} · ${t.measurementStatus === 'loading' ? 'retrieving planetary data…' : 'planetary data unavailable'}`
       : state.customEarthPoint
         ? `${state.customEarthPoint.name} · Earth data unavailable`
         : 'Select a target and a measured Earth match';

@@ -4,6 +4,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadEnv, env } from './lib/env.mjs';
 import { parseMcdSeries, summarizeMcdSeries } from './lib/sources/mcd.mjs';
+import { fetchPower } from './lib/sources/power.mjs';
+import { screenFeatures } from './lib/features.mjs';
+import { probeBody } from './lib/planetary-probe.mjs';
 
 /**
  * Zero-dependency static server for the ASTRA prototype.
@@ -36,6 +39,25 @@ function sendJson(response, status, payload) {
     'cache-control': 'no-store'
   });
   response.end(JSON.stringify(payload));
+}
+
+// Short-lived in-process cache so a click that is re-rendered does not repeat
+// eight DEM, temperature and MCD requests. The per-source disk cache in
+// tools/lib/http.mjs still provides reproducibility across restarts.
+const probeCache = new Map();
+const PROBE_TTL_MS = 10 * 60 * 1000;
+const PROBE_CACHE_MAX = 96;
+
+async function cachedProbe(body, lat, lon) {
+  const key = `${body}:${lat.toFixed(4)}:${lon.toFixed(4)}`;
+  const hit = probeCache.get(key);
+  if (hit && Date.now() - hit.time < PROBE_TTL_MS) return hit.payload;
+  const payload = await probeBody(body, lat, lon);
+  probeCache.set(key, { time: Date.now(), payload });
+  if (probeCache.size > PROBE_CACHE_MAX) {
+    probeCache.delete(probeCache.keys().next().value);
+  }
+  return payload;
 }
 
 async function fetchMarsClimatePoint(lat, lon) {
@@ -98,6 +120,30 @@ async function fetchMarsClimatePoint(lat, lon) {
 const server = http.createServer(async (request, response) => {
   const url = new URL(request.url || '/', `http://${request.headers.host}`);
 
+  if (url.pathname === '/api/probe' && request.method === 'GET') {
+    const body = String(url.searchParams.get('body') || '').toLowerCase();
+    const lat = Number(url.searchParams.get('lat'));
+    const lon = Number(url.searchParams.get('lon'));
+    if (!['moon', 'mars'].includes(body)) {
+      sendJson(response, 400, { error: 'body must be "moon" or "mars".' });
+      return;
+    }
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lon) || lon < -180 || lon > 180) {
+      sendJson(response, 400, { error: 'Latitude/longitude must be valid decimal degrees.' });
+      return;
+    }
+    try {
+      sendJson(response, 200, await cachedProbe(body, lat, lon));
+    } catch (error) {
+      sendJson(response, 502, {
+        body,
+        coordinate: { latitude: lat, longitude: lon },
+        error: error.name === 'AbortError' ? 'Planetary data request timed out.' : error.message || 'Planetary data request failed.'
+      });
+    }
+    return;
+  }
+
   if (url.pathname === '/api/mars-point' && request.method === 'GET') {
     const lat = Number(url.searchParams.get('lat'));
     const lon = Number(url.searchParams.get('lon'));
@@ -111,6 +157,37 @@ const server = http.createServer(async (request, response) => {
       sendJson(response, 502, {
         dataset: 'Mars Climate Database v6.2',
         error: error.name === 'AbortError' ? 'Mars Climate Database request timed out.' : error.message || 'Mars Climate Database request failed.'
+      });
+    }
+    return;
+  }
+
+  if (url.pathname === '/api/earth-point' && request.method === 'GET') {
+    const lat = Number(url.searchParams.get('lat'));
+    const lon = Number(url.searchParams.get('lon'));
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lon) || lon < -180 || lon > 180) {
+      sendJson(response, 400, { dataset: 'NASA POWER / MERRA-2', error: 'Latitude/longitude must be valid decimal degrees.' });
+      return;
+    }
+    try {
+      const power = await fetchPower(lat, lon, { refresh: true });
+      const features = screenFeatures(power);
+      if (!power || !features || !Object.values(features).some((value) => value && Number.isFinite(value.value))) {
+        throw new Error('NASA POWER returned no usable coordinate measurements.');
+      }
+      sendJson(response, 200, {
+        dataset: 'NASA POWER / MERRA-2',
+        retrievedAt: power.fetchedAt,
+        coordinate: { latitude: lat, longitude: lon },
+        source: { ...power.source, reference: power.url, observationPeriod: power.source.period, resolution: 'Approximately 0.5° native model grid; coordinate values are grid-resampled.' },
+        values: power.annual,
+        features,
+        completeness: Object.fromEntries(Object.entries(features).map(([key, value]) => [key, value ? 'measured' : 'unavailable']))
+      });
+    } catch (error) {
+      sendJson(response, 502, {
+        dataset: 'NASA POWER / MERRA-2',
+        error: error.message || 'NASA POWER coordinate query failed.'
       });
     }
     return;

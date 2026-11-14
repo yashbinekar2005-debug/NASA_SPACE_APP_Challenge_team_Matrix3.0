@@ -29,17 +29,27 @@ function esc(value) {
     .replace(/"/g, '&quot;');
 }
 
+const FACTOR_ROWS = Object.freeze([
+  ['temp', 'Temperature'],
+  ['solar', 'Solar illumination'],
+  ['ice', 'Ice and water'],
+  ['soil', 'Volcanic soil'],
+  ['terrain', 'Terrain roughness'],
+  ['dry', 'Dryness'],
+  ['tube', 'Lava-tube access']
+]);
+
+/** Full-precision value for the evidence trail (the cards use compact `fmt`). */
+function valueText(key, measured) {
+  const value = measured.value;
+  if (key === 'temp') return `${value} °C`;
+  if (key === 'solar') return `${value} kWh/m²/day`;
+  return `${value} / 100`;
+}
+
 function factRows(site) {
-  const rows = [
-    ['Temperature', 'temp', site.v.temp],
-    ['Solar illumination', 'solar', site.v.solar],
-    ['Ice and water', 'ice', site.v.ice],
-    ['Volcanic soil', 'soil', site.v.soil],
-    ['Terrain roughness', 'terrain', site.v.terrain],
-    ['Dryness', 'dry', site.v.dry],
-    ['Lava-tube access', 'tube', site.v.tube]
-  ];
-  return '<dl class="facts">' + rows.map(([label, key, value]) => {
+  return '<dl class="facts">' + FACTOR_ROWS.map(([key, label]) => {
+    const value = site.v[key];
     const sigma = fmtUncertainty(key, value);
     return `<div><dt>${label}</dt><dd>${fmt(key, value)}${sigma ? ` <span class="u">${sigma}</span>` : ''}</dd></div>`;
   }).join('') + '</dl>';
@@ -89,7 +99,21 @@ function profileText(profiles) {
 
 /** Evidence trail for the Earth candidate, one row per measured feature. */
 function provenanceHtml(analog) {
-  const items = (analog.provenance || []).map((entry) => {
+  // Committed cells carry a `provenance` array; a live POWER point exposes the
+  // same fields inside each feature value, so derive rows from `v` as a fallback.
+  const entries = (analog.provenance || []).length
+    ? analog.provenance
+    : Object.entries(analog.v || {})
+      .filter(([, value]) => value && Number.isFinite(value.value))
+      .map(([key, value]) => ({
+        key,
+        value: value.value,
+        unit: value.unit,
+        uncertainty: value.uncertainty,
+        source: value.source,
+        note: value.note
+      }));
+  const items = entries.map((entry) => {
     const source = entry.source || {};
     const link = source.url
       ? ` <a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">source</a>`
@@ -100,21 +124,107 @@ function provenanceHtml(analog) {
       (entry.note ? `<span>${esc(entry.note)}</span>` : '') + '</li>';
   });
   if (!items.length) return '<p class="cap">No provenance recorded for this cell.</p>';
-  return '<details class="prov"><summary>Evidence and provenance</summary><ul>' +
+  const earthPoint = Boolean(state.customEarthPoint);
+  return `<details class="prov"${earthPoint ? ' open' : ''}><summary>Evidence and provenance</summary><ul>` +
     items.join('') + '</ul></details>';
 }
 
 function targetEvidenceHtml(target) {
+  if (!target?.custom) return '';
   const measurements = target.measurements;
-  if (!measurements?.values) return '';
-  const source = measurements.source;
-  return `<details class="prov" open><summary>Planetary data and model context</summary>` +
-    `<p>${esc(source.name)} · ${esc(source.period)} · ${esc(source.resolution)}</p>` +
-    `<ul><li>Surface temperature: ${esc(measurements.values.temp.value.toFixed(2))} °C; seasonal spread ±${esc(measurements.values.temp.seasonalSpread.toFixed(2))} °C (${esc(measurements.completeness.temp)})</li>` +
-    `<li>Surface solar flux: ${esc(measurements.values.solar.value.toFixed(3))} kWh/m²/day; seasonal spread ±${esc(measurements.values.solar.seasonalSpread.toFixed(3))} (${esc(measurements.completeness.solar)})</li>` +
-    `<li>Surface pressure: ${esc(measurements.values.pressureKpa.value.toFixed(3))} kPa; seasonal spread ±${esc(measurements.values.pressureKpa.seasonalSpread.toFixed(3))} kPa (${esc(measurements.completeness.pressure)})</li></ul>` +
-    '<p class="cap">MCD does not provide a pointwise statistical uncertainty estimate; seasonal spread is reported separately and is not presented as model error.</p>' +
-    `<a href="${esc(source.reference)}" target="_blank" rel="noopener noreferrer">Retrieved source data</a> · <a href="${esc(source.url)}" target="_blank" rel="noopener noreferrer">MCD documentation</a></details>`;
+  if (!measurements) {
+    return `<p class="cap">${esc(state.researchError || 'Coordinate measurements are still loading.')}</p>`;
+  }
+  if (!measurements.values) {
+    return `<p class="cap">${esc(state.researchError || 'The returned payload contains no point measurements.')}</p>`;
+  }
+  const source = measurements.source || {};
+  const rows = FACTOR_ROWS.map(([key, label]) => {
+    const measured = measurements.values[key];
+    const completeness = measurements.completeness?.[key];
+    if (!measured || !Number.isFinite(measured.value)) {
+      return `<li class="missing"><b>${esc(label)}</b> — not available` +
+        `${completeness ? ` (${esc(completeness)})` : ''}</li>`;
+    }
+    const step = measured.source || {};
+    const link = step.url
+      ? ` <a href="${esc(step.url)}" target="_blank" rel="noopener noreferrer">source</a>`
+      : '';
+    const count = completeness ? ` <span class="prov-count">${esc(completeness)}</span>` : '';
+    const note = measured.note ? `<span>${esc(measured.note)}</span>` : '';
+    const unit = measured.unit === 'index' ? ' index' : ` ${measured.unit || ''}`.trimEnd();
+    const sigma = Number.isFinite(measured.uncertainty) ? ` ±${measured.uncertainty}${unit}` : '';
+    return `<li><b>${esc(label)}</b> — ${esc(valueText(key, measured))}${esc(sigma)}` +
+      `${count}${link}${note}</li>`;
+  });
+  const pressure = measurements.values.pressureKpa;
+  if (pressure && Number.isFinite(pressure.value)) {
+    const count = measurements.completeness?.pressure
+      ? ` <span class="prov-count">${esc(measurements.completeness.pressure)}</span>`
+      : '';
+    const note = pressure.note ? `<span>${esc(pressure.note)}</span>` : '';
+    rows.push(`<li><b>Surface pressure</b> — ${pressure.value} kPa` +
+      `${Number.isFinite(pressure.uncertainty) ? ` ±${pressure.uncertainty} kPa` : ''}${count}${note}</li>`);
+  }
+  const warnings = Array.isArray(measurements.warnings) && measurements.warnings.length
+    ? '<p class="eyebrow">Data caveats</p><ul class="warnlist">' +
+      measurements.warnings.map((warning) => `<li>${esc(warning)}</li>`).join('') + '</ul>'
+    : '';
+  const links = (measurements.sources || [source])
+    .filter((entry) => entry?.url)
+    .map((entry) => `<a href="${esc(entry.url)}" target="_blank" rel="noopener noreferrer">${esc(entry.name)}</a>`)
+    .join(' · ');
+  const reference = measurements.reference
+    ? `<a href="${esc(measurements.reference)}" target="_blank" rel="noopener noreferrer">Retrieved source data</a>`
+    : '';
+  return `<details class="prov" open><summary>Planetary measurements and provenance</summary>` +
+    `<p>${esc(source.name || measurements.dataset || 'Planetary point probe')}` +
+    `${source.period ? ` · ${esc(source.period)}` : ''}` +
+    `${source.resolution ? ` · ${esc(source.resolution)}` : ''}</p>` +
+    `<ul>${rows.join('')}</ul>` +
+    warnings +
+    `<p class="cap">${[reference, links].filter(Boolean).join(' · ')}</p>` +
+    '</details>';
+}
+
+/** A real 3×3 DEM sample, used instead of a generated preview for custom points. */
+function demGridHtml(target) {
+  const terrain = target?.measurements?.values?.terrain;
+  const samples = terrain?.samples;
+  if (!Array.isArray(samples) || samples.length !== 9 || !samples.every(Number.isFinite)) return '';
+  const min = Math.min(...samples);
+  const max = Math.max(...samples);
+  const span = Math.max(1, max - min);
+  const hue = target.body === 'moon' ? 199 : 24;
+  const label = target.body === 'moon' ? 'LOLA' : 'MOLA';
+  return '<div class="dem-grid" role="img" aria-label="3 by 3 elevation sample in metres">' +
+    samples.map((value) => {
+      const t = (value - min) / span;
+      return `<span style="background:hsl(${hue} 60% ${12 + 34 * t}%)">${Math.round(value)}</span>`;
+    }).join('') + '</div>' +
+    `<p class="cap">${label} 3×3 elevation samples (m); relief ${esc(terrain.reliefM)} m over about ${esc((terrain.radiusKm || 0) * 2)} km. Real measured relief, not a generated scene.</p>`;
+}
+
+function terrainParams(site, body) {
+  if (site?.tp) return site.tp;
+  const seed = Math.abs(Math.round((Number(site?.lat) + 90) * 1000 + (Number(site?.lon) + 180))) % 100000;
+  return {
+    seed,
+    rough: 0.4,
+    crater: body === 'moon' ? 0.5 : body === 'earth' ? 0 : 0.3,
+    pit: 0,
+    ripple: body === 'mars' ? 0.25 : body === 'earth' ? 0.3 : 0
+  };
+}
+
+function uniqueWarnings(...lists) {
+  const seen = new Set();
+  return lists.flatMap((list) => Array.isArray(list) ? list : [])
+    .filter((warning) => {
+      if (!warning || seen.has(warning)) return false;
+      seen.add(warning);
+      return true;
+    });
 }
 
 function nonReplicableHtml(list) {
@@ -178,10 +288,11 @@ function summaryText(r, t) {
     [...new Set(a.provenance.map((entry) => entry.source?.name).filter(Boolean))]
       .forEach((name) => lines.push('  - ' + name));
   }
-  if (r.warnings && r.warnings.length) {
+  const allWarnings = uniqueWarnings(r.warnings, t.measurements?.warnings);
+  if (allWarnings.length) {
     lines.push('');
     lines.push('Warnings:');
-    r.warnings.forEach((warning) => lines.push('  - ' + warning));
+    allWarnings.forEach((warning) => lines.push('  - ' + warning));
   }
   lines.push('');
   lines.push('Engine v' + (r.engineVersion || ENGINE_VERSION) + ' · config ' + (r.configVersion || ''));
@@ -204,12 +315,7 @@ export function renderCompare({ onBack } = {}) {
   if (!r) {
     if (t?.custom || state.customEarthPoint) {
       const differences = nonReplicableHtml(nonReplicableFor(t?.body || state.mode));
-      const measured = t?.measurements;
-      const measurementRows = measured?.values
-        ? `<dl class="facts"><div><dt>Surface temperature</dt><dd>${fmt('temp', measured.values.temp)} <span class="u">modelled, seasonal/diurnal climatology</span></dd></div>` +
-          `<div><dt>Surface solar flux</dt><dd>${fmt('solar', measured.values.solar)}</dd></div>` +
-          `<div><dt>Surface pressure</dt><dd>${measured.values.pressureKpa.value.toFixed(3)} kPa</dd></div></dl>`
-        : `<p class="cap">${esc(state.researchError || 'Coordinate measurements are still loading.')}</p>`;
+      const measurementRows = targetEvidenceHtml(t);
       $('#viewCompare').innerHTML =
         '<section class="panel"><h2>No ranked match is available</h2>' +
         '<p class="cap">The selected point is not assigned a similarity score until planetary data is validated. When available, the score uses comparable measured factors only.</p>' +
@@ -225,12 +331,13 @@ export function renderCompare({ onBack } = {}) {
     return;
   }
   const a = r.analog;
-  const hue = state.mode === 'moon' ? 199 : 24;
-  const sp = state.mode === 'moon' ? 'Moon' : 'Mars';
+  const hue = t.body === 'moon' ? 199 : 24;
+  const sp = t.body === 'moon' ? 'Moon' : 'Mars';
+  const demPreview = t.custom ? demGridHtml(t) : '';
   const weak = weakPoints(r, t);
   const coverage = Math.round((r.coverage ?? 0) * 100);
   const confidence = Math.round(r.confidence ?? 0);
-  const warnings = r.warnings ?? [];
+  const warnings = uniqueWarnings(r.warnings, t.measurements?.warnings);
   const limitations = a.limitations ?? [];
   const statusNote = r.status === 'ok'
     ? ''
@@ -304,8 +411,8 @@ export function renderCompare({ onBack } = {}) {
         <span class="eyebrow">${sp} · Space target</span>
         <h3>${esc(t.name)}</h3>
         <p class="region">${esc(t.region)}</p>
-        <canvas class="terrain" id="tcSpace" aria-label="Terrain preview of ${esc(t.name)}" role="img"></canvas>
-        <p class="cap">Generated terrain preview. Drag to turn it.</p>
+        ${demPreview || `<canvas class="terrain" id="tcSpace" aria-label="Terrain preview of ${esc(t.name)}" role="img"></canvas>
+        <p class="cap">Generated terrain preview. Drag to turn it.</p>`}
         ${factRows(t)}
         ${targetEvidenceHtml(t)}
         <p class="goal"><b>Mission goal</b>${esc(t.goal)}</p>
@@ -332,7 +439,7 @@ export function renderCompare({ onBack } = {}) {
         </div>
       </section>` +
       `<article class="panel site site-earth">
-        <span class="eyebrow">Earth analog · discovered</span>
+        <span class="eyebrow">Earth analog · ${state.customEarthPoint ? 'selected coordinate' : 'discovered'}</span>
         <h3>${esc(a.name)}</h3>
         <p class="region">${esc(a.region)} · ${esc(fmtCoords(a.lat, a.lon))}</p>
         <canvas class="terrain" id="tcEarth" aria-label="Terrain preview of ${esc(a.name)}" role="img"></canvas>
@@ -377,7 +484,9 @@ export function renderCompare({ onBack } = {}) {
       nonReplicableHtml(r.nonReplicable) +
     '</section>';
 
-  terrains = [makeTerrain($('#tcSpace'), t.tp, hue), makeTerrain($('#tcEarth'), a.tp, 160)];
+  terrains = [];
+  if ($('#tcSpace')) terrains.push(makeTerrain($('#tcSpace'), terrainParams(t, t.body), hue));
+  if ($('#tcEarth')) terrains.push(makeTerrain($('#tcEarth'), terrainParams(a, 'earth'), 160));
 
   $('#backBtn').onclick = back;
   $('#backBtn2').onclick = back;
