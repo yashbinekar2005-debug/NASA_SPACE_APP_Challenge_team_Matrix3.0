@@ -1,169 +1,74 @@
-# 🌍 NASA Planetary Analog Location Finder
+# ASTRA: Earth Analog Finder
 
-### Finding Earth Locations That Resemble the Moon and Mars Using NASA Data, Geospatial Analysis & Artificial Intelligence
+ASTRA helps you explore how selected places on the Moon or Mars compare with places on Earth. Choose a published planetary target or click a coordinate on a globe, then review the measurements, image sources, and similarity results together.
 
-## 🚀 Project Overview
+## What you can do
 
-The **NASA Planetary Analog Location Finder** is a geospatial intelligence platform designed to identify and rank locations on Earth that share similar geological, topographical, thermal, and environmental characteristics with selected regions of the Moon and Mars.
+- Select a Moon or Mars target, or probe a coordinate directly on the globe.
+- Compare supported measurements such as temperature, sunlight, terrain, geology, soil, and water or ice evidence.
+- Adjust factor weights and see the Earth ranking update.
+- Review the score breakdown, data coverage, uncertainty, sources, and environmental differences that Earth cannot reproduce.
+- View NASA imagery for both selected locations. Earth imagery uses NASA GIBS; if the latest image has no visible coverage, ASTRA checks recent dates and labels the capture it displays. Moon and Mars imagery uses NASA/JPL Trek mosaics.
+- Open the detailed site report or export the comparison as a PDF.
 
-The project uses scientific datasets collected from NASA APIs, the Planetary Data System (PDS), NASA Earthdata, and other relevant scientific data providers.
+## Start the app
 
-By analyzing regional characteristics such as elevation, terrain roughness, slope, surface temperature, water availability, ice indicators, and mineral composition, the system calculates similarity scores and identifies potential Earth analog locations.
+You need Node.js 18 or newer. No package installation or build step is required.
 
-The ultimate goal is to help researchers, scientists, and space exploration teams identify suitable terrestrial environments for planetary research, astronaut training, habitat testing, and rover experiments.
+From this folder, run:
 
----
-
-## 🎯 Project Objectives
-
-- Identify Earth regions that resemble selected areas of the Moon and Mars.
-- Collect regional planetary and terrestrial datasets through scientific APIs and archives.
-- Analyze water presence, temperature, terrain, and geological characteristics.
-- Develop a mathematical similarity algorithm to compare planetary regions.
-- Rank Earth locations according to their similarity to the selected planetary target.
-- Provide transparent similarity scores and feature-by-feature explanations.
-- Integrate Machine Learning where it demonstrably improves prediction and ranking.
-- Visualize results through an interactive geospatial interface.
-
----
-
-## 🪐 Planetary Bodies Under Analysis
-
-| Planetary Body | Data to Analyze |
-|---|---|
-| 🌍 Earth | Temperature, surface water, soil moisture, elevation, slope, roughness, minerals |
-| 🌕 Moon | Lunar elevation, surface temperature, craters, hydrogen and water-ice indicators |
-| 🔴 Mars | Elevation, surface temperature, thermal inertia, hydrated minerals, water-ice indicators |
-
-## 🔬 Key Comparison Parameters
-
-The system will initially focus on the following characteristics:
-
-| Parameter | Description | Importance |
-|---|---|---|
-| Water / Ice Evidence | Surface water, soil moisture, ice and volatile indicators | High |
-| Temperature | Regional surface temperature and temperature variation | High |
-| Elevation | Height and regional topography | High |
-| Slope | Surface inclination | High |
-| Terrain Roughness | Surface irregularity and ruggedness | High |
-| Mineral Composition | Geological and mineralogical similarity | Medium |
-| Crater Density | Number and distribution of impact craters | Medium |
-| Surface Albedo | Surface reflectivity | Medium |
-
-**Scientific consideration:** Water measurements differ across planetary bodies. Earth's soil moisture, Mars' hydrogen indicators, and lunar neutron measurements cannot be treated as identical quantities. The system will preserve their original measurement types and uncertainties.
-
----
-
-## 🛰️ Data Sources & APIs
-
-The project will use official scientific datasets and APIs wherever possible.
-
-| Data Provider | Purpose |
-|---|---|
-| [NASA API](https://api.nasa.gov/) | Access supported NASA APIs |
-| [NASA PDS](https://pds.nasa.gov/) | Moon and Mars planetary mission datasets |
-| [NASA Earthdata](https://www.earthdata.nasa.gov/) | Earth observation datasets |
-| [NASA CMR](https://cmr.earthdata.nasa.gov/) | Scientific dataset discovery |
-| [NASA GIBS](https://www.earthdata.nasa.gov/data/tools/gibs) | Satellite imagery visualization |
-| [NASA SMAP](https://smap.jpl.nasa.gov/) | Earth soil moisture |
-| [NASA LOLA](https://science.nasa.gov/mission/lro/) | Lunar elevation and topography |
-| [NASA Diviner](https://science.nasa.gov/mission/lro/) | Lunar thermal measurements |
-| [NASA MOLA](https://pds-geosciences.wustl.edu/) | Mars elevation and topography |
-| [NASA THEMIS](https://science.nasa.gov/mission/odyssey/) | Mars thermal observations |
-| [NASA CRISM](https://science.nasa.gov/mission/mars-reconnaissance-orbiter/) | Mars mineralogical observations |
-
-Additional datasets such as MODIS land surface temperature and JRC Global Surface Water may be integrated to improve Earth-side comparisons.
-
-*Note: Not every dataset is accessible through a single API endpoint. Some require authentication, product downloads, and scientific raster processing.*
-
----
-
-## 🧠 Algorithm Development
-
-One of the most important parts of this project is developing a reliable algorithm that can identify the most similar Earth regions.
-
-### Stage 1: Data Collection
-- Retrieve regional data for Earth, Moon, and Mars.
-- Collect temperature, water-related indicators, terrain, and geological information.
-- Store original measurements with units, source metadata, and quality information.
-
-### Stage 2: Data Preprocessing
-- Handle missing values.
-- Normalize measurements.
-- Standardize units.
-- Align geographic projections and spatial resolutions.
-- Extract regional statistical features.
-
-### Stage 3: Feature Extraction
-
-Convert raw scientific datasets into structured numerical features.
-
-Example:
-
-```python
-region_features = {
-    "temperature_median": None,
-    "temperature_range": None,
-    "water_evidence": None,
-    "elevation_median": None,
-    "slope_mean": None,
-    "terrain_roughness": None,
-    "mineral_composition": None
-}
+```sh
+node tools/serve.mjs
 ```
 
-Values will be populated from actual processed datasets, not manually assumed.
+Then open [http://localhost:4173](http://localhost:4173). To use a different port, set the `PORT` environment variable before starting the server.
 
-### Stage 4: Similarity Calculation
+The server supports live coordinate probes and the app's data routes. A static host can display the front end and its committed Earth discovery snapshot, but it cannot provide those live server routes by itself.
 
-The initial algorithm will use a weighted distance-based similarity model.
+## API keys and tokens
 
-**Weighted Euclidean Distance:**
+Most connected sources are public and do not need an API key. In particular, NASA POWER is keyless; setting `NASA_POWER_API_KEY` does not change its requests or improve its results. The app requests POWER's 2001-2020 climatology.
 
-\[
-D = \sqrt{\sum_{i=1}^{n}w_i(x_i-y_i)^2}
-\]
+Two optional settings are documented in [.env.example](.env.example):
 
-Where:
+- `NASA_EARTHDATA_TOKEN` lets the server check whether an Earthdata Login token is valid at `/api/auth/status`. It is not needed for NASA POWER.
+- `OPEN_TOPO_DATA_API_KEY` can be used for OpenTopoData requests when regenerating the Earth discovery data.
 
-- \(x_i\): Target planetary feature.
-- \(y_i\): Earth candidate feature.
-- \(w_i\): Feature importance.
-- \(D\): Weighted distance.
+Keep credentials in the root `.env` file. Do not commit that file or paste credential values into the README.
 
-The final score will be calculated using normalized feature distances:
+## How the comparisons work
 
-\[
-Similarity = 100(1-D_{normalized})
-\]
+Earth candidates are screening-grid cells from the committed discovery snapshot in `js/data/discovered.js`. The snapshot is generated from NASA POWER climate data, SRTM elevation, SoilGrids soil data, and Macrostrat geology. To fetch and rebuild the snapshot, run:
 
-The normalized distance will be bounded between 0 and 1.
+```sh
+node tools/discover.mjs
+```
 
-**Implementation note:** the first working baseline follows the more detailed
-`plan.md` specification and uses a weighted mean of bounded per-feature
-distances, not a raw Euclidean distance over unfiltered values:
+When you click a planetary coordinate, the server requests coordinate-specific products where available. Moon probes use sources such as LRO LOLA and Diviner and Kaguya MI. Mars probes use MOLA, USGS SIM3292 geology, and the Mars Climate Database. The app identifies modelled climatology and proxy values as such in the results.
 
-\[
-d_i = \min\left(1,\frac{|x_i-y_i|}{cap_i}\right), \qquad
-D_j = \frac{\sum_i w_i d_{ij}}{\sum_i w_i}, \qquad
-Similarity_j = 100(1-D_j)
-\]
+A similarity score is calculated from the selected weights and valid, comparable measurements. Missing or incompatible measurements are excluded rather than treated as zero. The results show coverage and uncertainty alongside the score, and explain important differences such as lunar gravity, vacuum, and radiation that an Earth location cannot match.
 
-Only valid, comparable features contribute. Missing measurements are excluded
-and the remaining weights are renormalised; coverage and confidence are reported
-separately from similarity. Temperature, evidence-class and quantile-distribution
-distances are supported.
+The Earth candidate snapshot is a sampled search grid, not a measurement at every point on Earth. Satellite coverage, product resolution, observation dates, and model periods vary by dataset. A matching score is a research aid, not proof that two environments are identical.
 
-The baseline is implemented in the ASTRA prototype:
+## Run the tests
 
-- **Engine:** `ASTRA UI prototype/js/core/algorithm/`
-- **UI facade:** `ASTRA UI prototype/js/core/scoring.js`
-- **Specification:** `docs/algorithm.md`
-- **Data dictionary:** `docs/data_dictionary.md`
-- **Tests:** `node --test tests/algorithm.test.mjs` (run inside
-  `ASTRA UI prototype/`)
+Run the project's Node test suite with:
 
-The UI contract (`score`, `tier`, `rankAnalogs`, `{ total, parts }`) is
-preserved. Results additionally expose coverage, confidence, profile scores,
-per-feature distances, warnings, explanations, engine/config versions and a
-reproducible run fingerprint.
+```sh
+node --test tests/algorithm.test.mjs
+```
+
+The tests cover scoring and ranking, measurement validation, imagery request construction, coordinate probes, and display formatting.
+
+## Where to look in the code
+
+- `index.html` and `css/`: page structure and styles
+- `js/main.js`: app interactions and dashboard rendering
+- `js/core/algorithm/`: similarity scoring, confidence, and uncertainty
+- `js/core/imagery.js`: NASA image requests and date handling
+- `js/data/targets.js` and `js/data/discovered.js`: planetary targets and Earth candidate snapshot
+- `tools/serve.mjs`: local server and live API routes
+- `tools/lib/planetary-probe.mjs`: Moon and Mars coordinate measurements
+- `tools/discover.mjs`: Earth candidate snapshot generation
+- `tests/algorithm.test.mjs`: automated tests
+- `docs/algorithm.md` and `docs/data_dictionary.md`: scoring details and data definitions
