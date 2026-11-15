@@ -62,11 +62,13 @@ const RETRY_STATUSES = new Set([408, 422, 425, 429, 500, 502, 503, 504, 522, 524
  * widely in tolerance; a per-source pace is cheaper than being throttled.
  */
 export function createThrottle(intervalMs) {
-  let last = 0;
+  let nextStart = 0;
   return async function throttle() {
-    const wait = intervalMs - (Date.now() - last);
+    const now = Date.now();
+    const startAt = Math.max(now, nextStart);
+    nextStart = startAt + intervalMs;
+    const wait = startAt - now;
     if (wait > 0) await sleep(wait);
-    last = Date.now();
   };
 }
 
@@ -95,6 +97,7 @@ export async function fetchCached(url, options = {}) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
+      if (typeof options.beforeFetch === 'function') await options.beforeFetch();
       requestCount += 1;
       const response = await fetch(url, {
         method: options.method ?? 'GET',

@@ -24,11 +24,11 @@ export async function fetchRelief(lat, lon, { refresh = false, spacingDeg = 0.08
   }
 
   const url = `https://api.opentopodata.org/v1/srtm90m?locations=${encodeURIComponent(locations.join('|'))}`;
-  await throttle();
   const response = await fetchCached(url, {
     namespace: 'opentopodata',
     refresh,
     timeout: 60000,
+    beforeFetch: throttle,
     headers: env('OPEN_TOPO_DATA_API_KEY')
       ? { authorization: `Bearer ${env('OPEN_TOPO_DATA_API_KEY')}` }
       : {}

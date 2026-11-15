@@ -411,7 +411,7 @@ async function marsGeology(lat, lon) {
   return { ...proxy, reference: url };
 }
 
-async function mcdRequest({ lat, lon, parameters }) {
+async function mcdRequest({ lat, lon, parameters, timeout = 45000, retries = 1 }) {
   const endpoint = new URL(MCD_ENDPOINT);
   // zkey=3 means "m above the local surface". Surface quantities therefore
   // require altitude 0 at every point; the CGI rejects negative values because
@@ -429,8 +429,8 @@ async function mcdRequest({ lat, lon, parameters }) {
   const page = await fetchCached(endpoint.href, {
     namespace: 'mcd-page',
     acceptText: true,
-    timeout: 45000,
-    retries: 1
+    timeout,
+    retries
   });
   const html = page.body;
   if (/Ooops!|Bad syntax|Please correct|AttributeError/i.test(html)) {
@@ -442,8 +442,8 @@ async function mcdRequest({ lat, lon, parameters }) {
   const data = await fetchCached(dataUrl.href, {
     namespace: 'mcd-data',
     acceptText: true,
-    timeout: 45000,
-    retries: 1
+    timeout,
+    retries
   });
   return {
     series: parseMcdSeries(data.body),
@@ -455,8 +455,10 @@ async function mcdRequest({ lat, lon, parameters }) {
 
 async function marsClimate(lat, lon, surfaceElevationM) {
   const [climate, water] = await Promise.allSettled([
-    mcdRequest({ lat, lon, parameters: ['tsurf', 'ps', 'fluxsurf_dn_sw'] }),
-    mcdRequest({ lat, lon, parameters: ['water_cap', 'col_h2ovapor', 'surf_h2o_ice'] })
+    mcdRequest({ lat, lon, parameters: ['tsurf', 'ps', 'fluxsurf_dn_sw'], timeout: 75000, retries: 0 }),
+    // Water/vapour layers are secondary evidence. A slow optional layer must
+    // not turn otherwise usable temperature/pressure/solar data into failure.
+    mcdRequest({ lat, lon, parameters: ['water_cap', 'col_h2ovapor', 'surf_h2o_ice'], timeout: 12000, retries: 0 })
   ]);
   if (climate.status !== 'fulfilled') {
     return { error: shortError(climate.reason), water: water.status === 'fulfilled' ? water.value : null };
@@ -520,7 +522,7 @@ async function marsClimate(lat, lon, surfaceElevationM) {
         ...marsDryness(vapour.mean),
         unit: 'index',
         source: { ...SOURCE.mcd, id: 'mars-climate-database-vapour', name: 'Mars Climate Database v6.2 water-vapour column', reference: water.value.reference },
-        measurementType: 'aridity_proxy'
+      measurementType: 'vacuum_reference'
       };
     }
   }
@@ -595,7 +597,7 @@ export async function probeBody(body, lat, lon) {
       uncertainty: 0,
       unit: 'index',
       source: SOURCE.moonVacuum,
-      measurementType: 'aridity_proxy',
+      measurementType: 'atmospheric_water_vapour_proxy',
       note: 'The Moon has no appreciable atmosphere, so the atmospheric dry-air proxy is saturated at 100. This is not a soil-moisture measurement.'
     };
     completeness.dry = 'reference value';
@@ -693,7 +695,7 @@ export async function probeBody(body, lat, lon) {
     completeness.ice = 'unavailable';
   }
   if (climate.dry) {
-    values.dry = { ...climate.dry, source: climate.dry.source, measurementType: 'aridity_proxy' };
+    values.dry = { ...climate.dry, source: climate.dry.source, measurementType: 'atmospheric_water_vapour_proxy' };
     completeness.dry = climate.completeness.dry;
   } else {
     completeness.dry = 'unavailable';

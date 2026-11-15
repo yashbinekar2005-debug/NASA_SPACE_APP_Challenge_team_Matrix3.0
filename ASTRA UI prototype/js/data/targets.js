@@ -98,7 +98,7 @@ export const TARGETS = [
         value: 100,
         uncertainty: 0,
         source: SRC.diviner,
-        measurementType: 'aridity_proxy',
+        measurementType: 'vacuum_reference',
         note: 'Vacuum; no atmospheric humidity.'
       },
       tube: {
@@ -165,7 +165,7 @@ export const TARGETS = [
         value: 100,
         uncertainty: 0,
         source: SRC.horvath,
-        measurementType: 'aridity_proxy',
+        measurementType: 'vacuum_reference',
         note: 'Vacuum.'
       },
       tube: {
@@ -232,7 +232,7 @@ export const TARGETS = [
         value: 95,
         uncertainty: 3,
         source: SRC.meda,
-        measurementType: 'aridity_proxy',
+        measurementType: 'atmospheric_water_vapour_proxy',
         note: 'Very low atmospheric water vapour; no liquid surface water.'
       },
       tube: {
@@ -299,7 +299,7 @@ export const TARGETS = [
         value: 97,
         uncertainty: 3,
         source: SRC.mcd,
-        measurementType: 'aridity_proxy',
+        measurementType: 'atmospheric_water_vapour_proxy',
         note: 'Very low atmospheric water vapour.'
       },
       tube: {

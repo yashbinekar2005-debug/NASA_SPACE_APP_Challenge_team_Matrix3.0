@@ -3,10 +3,11 @@ import { ANALOGS, FACTORS, PRESETS, TARGETS, targetOf } from './data/index.js';
 import { state, curTarget } from './core/state.js';
 import { rankAnalogs } from './core/scoring.js';
 import { rankMeasuredEarthPoint, rankMeasuredPoint, validateEarthPointResponse, validatePointProbe } from './core/research.js';
+import { hasVisibleImageCoverage, pointImage } from './core/imagery.js';
 import { D2R, shortest } from './utils/math.js';
 import { clampT } from './graphics/globe.js';
-import { renderTargets, renderPresets, renderSliders, markPreset, updateSliderState } from './ui/controls.js';
-import { renderResults, updatePair } from './ui/results.js';
+import { renderTargets, renderPresets, renderSliders, markPreset, updateSliderState, renderPlanetLocations, updatePlanetLocationStatus } from './ui/controls.js';
+import { renderResults, updatePair, visibleRanked } from './ui/results.js';
 import {
   E, O, initStage, layoutStage, renderStage, flyEarth, flyOther, setOtherTexture
 } from './ui/stage.js';
@@ -42,16 +43,15 @@ function rank() {
  */
 function refresh(selectTop) {
   rank();
-  const top = state.ranked.slice(0, 6).map((r) => r.analog.id);
+  const visible = visibleRanked();
   const prev = state.analogId;
-  if (!state.ranked.length) {
-    state.analogId = null;
-  } else if (selectTop || !state.analogId || top.indexOf(state.analogId) < 0) {
-    state.analogId = state.ranked[0].analog.id;
-  }
+  // Every fresh research execution selects its highest-scoring supportable
+  // candidate. Manual selection remains possible until weights/query change.
+  state.analogId = visible[0]?.analog.id ?? null;
   renderResults();
   updatePair();
-  if (state.analogId !== prev) flyEarth();
+  if (state.analogId !== prev) { flyEarth(); renderLocationImagery(); }
+  if (state.view === 'compare') refreshCompare();
 }
 
 function selectTarget(id) {
@@ -82,51 +82,18 @@ function selectTarget(id) {
   updateSliderState();
   refresh(true);
   flyOther();
-  if (state.view === 'compare') refreshCompare();
+  renderLocationImagery();
 }
 
 function selectAnalog(id) {
-  if (!state.ranked.some((entry) => entry.analog.id === id)) return;
+  if (!visibleRanked().some((entry) => entry.analog.id === id)) return;
+  state.earthImageAssessment = null;
   state.analogId = id;
   renderResults();
   updatePair();
   flyEarth();
   renderLocationImagery();
-}
-
-function earthImageUrl(lat, lon, layer = 'MODIS_Terra_CorrectedReflectance_TrueColor') {
-  const time = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
-  const halfLat = 0.45;
-  const halfLon = Math.min(3, 0.45 / Math.max(0.15, Math.cos(lat * D2R)));
-  const params = new URLSearchParams({
-    SERVICE: 'WMS', REQUEST: 'GetMap', VERSION: '1.1.1', LAYERS: layer,
-    STYLES: '', FORMAT: 'image/jpeg', SRS: 'EPSG:4326', WIDTH: '640', HEIGHT: '320',
-    TIME: time,
-    BBOX: `${Math.max(-180, lon - halfLon)},${Math.max(-90, lat - halfLat)},${Math.min(180, lon + halfLon)},${Math.min(90, lat + halfLat)}`
-  });
-  return `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?${params}`;
-}
-
-function pointImage(body, lat, lon) {
-  if (body === 'earth') {
-    return {
-      url: earthImageUrl(lat, lon), fallback: earthImageUrl(lat, lon, 'MODIS_Aqua_CorrectedReflectance_TrueColor'),
-      source: 'NASA GIBS · MODIS Terra true color',
-      citation: 'Daily satellite composite; image footprint is centered on the selected coordinate.'
-    };
-  }
-  const moon = body === 'moon';
-  const product = moon ? 'LRO_WAC_Mosaic_Global_303ppd_v02' : 'Mars_Viking_MDIM21_ClrMosaic_global_232m';
-  // NASA Trek geographic WMTS has 2×1 tiles at zoom 0, doubling each zoom.
-  const z = 4;
-  const cols = 2 * 2 ** z, rows = 2 ** z;
-  const col = Math.max(0, Math.min(cols - 1, Math.floor((lon + 180) / 360 * cols)));
-  const row = Math.max(0, Math.min(rows - 1, Math.floor((90 - lat) / 180 * rows)));
-  return {
-    url: `https://trek.nasa.gov/tiles/${moon ? 'Moon' : 'Mars'}/EQ/${product}/1.0.0/default/default028mm/${z}/${row}/${col}.jpg`,
-    source: moon ? 'NASA/JPL/ASU LRO WAC global mosaic' : 'NASA/JPL Mars Trek Viking global color mosaic',
-    citation: `Regional surface mosaic tile at ${lat.toFixed(3)}°, ${lon.toFixed(3)}°; not a point-specific raw frame.`
-  };
+  if (state.view === 'compare') refreshCompare();
 }
 
 function renderLocationImagery() {
@@ -143,29 +110,56 @@ function renderLocationImagery() {
   root.hidden = false;
   root.replaceChildren();
   for (const point of points.slice(0, 2)) {
-    const image = pointImage(point.body, point.lat, point.lon);
+    const image = pointImage(point.body, point.lat, point.lon, point.body === 'earth' ? state.earthImageDate : null, state.earthImageSatellite || 'Terra');
     const figure = document.createElement('figure');
     figure.className = 'image-card';
     const img = document.createElement('img');
     img.loading = 'lazy'; img.referrerPolicy = 'no-referrer';
+    if (point.body === 'earth') img.crossOrigin = 'anonymous';
     img.alt = `${image.source} imagery near ${point.lat.toFixed(3)}, ${point.lon.toFixed(3)}`;
     const caption = document.createElement('figcaption');
     const title = document.createElement('b'); title.textContent = `${point.label}: ${point.name || `${point.lat.toFixed(3)}°, ${point.lon.toFixed(3)}°`}`;
     const provenance = document.createElement('span'); provenance.textContent = `${image.source}. ${image.citation} `;
-    const link = document.createElement('a'); link.href = image.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; link.textContent = 'Source';
-    caption.append(title, provenance, link); figure.append(img, caption); root.append(figure);
-    img.onerror = () => {
-      if (image.fallback && img.dataset.fallback !== 'used') { img.dataset.fallback = 'used'; img.src = image.fallback; }
-      else { img.removeAttribute('src'); img.alt = `Imagery unavailable from ${image.source}`; figure.classList.add('image-unavailable'); provenance.textContent = `${image.source} is currently unavailable for this location.`; }
+    const link = document.createElement('a'); link.textContent = image.url ? 'Source' : 'Choose a capture date in Compare';
+    if (image.url) { link.href = image.url; link.target = '_blank'; link.rel = 'noopener noreferrer'; }
+    caption.append(title, provenance, link); figure.append(caption); if (image.url) figure.prepend(img); else figure.classList.add('image-date-empty'); root.append(figure);
+    const fallbacks = image.fallbacks?.length ? image.fallbacks : (image.fallback ? [image.fallback] : []);
+    const tryNextFallback = () => {
+      const fallbackIndex = Number(img.dataset.fallbackIndex || 0);
+      if (fallbackIndex < fallbacks.length) {
+        img.dataset.fallbackIndex = String(fallbackIndex + 1);
+        img.src = fallbacks[fallbackIndex];
+        return true;
+      }
+      return false;
     };
-    img.src = image.url;
+    const showUnavailable = () => {
+      img.remove(); figure.classList.add('image-unavailable'); provenance.textContent = `${image.source} has no image coverage at this coordinate in the available capture dates.`;
+    };
+    img.onerror = () => { if (!tryNextFallback()) showUnavailable(); };
+    img.onload = () => {
+      if (point.body !== 'earth' || !image.latest) return;
+      if (!hasVisibleImageCoverage(img)) {
+        if (!tryNextFallback()) showUnavailable();
+        return;
+      }
+      const fallbackIndex = Number(img.dataset.fallbackIndex || 0);
+      if (fallbackIndex > 0) {
+        const captureDate = image.fallbackDates?.[fallbackIndex - 1];
+        if (captureDate) {
+          provenance.textContent = `${image.source}. Latest capture with image coverage at this coordinate: ${captureDate}.`;
+          link.href = img.src;
+        }
+      }
+    };
+    if (image.url) img.src = image.url;
   }
 }
 
 let planetRequestId = 0;
 let earthRequestId = 0;
 
-function selectLocation(body, lat, lon) {
+function selectLocation(body, lat, lon, namedFeature = null) {
   const requestId = body === 'earth' ? ++earthRequestId : ++planetRequestId;
   if (body !== 'earth') earthRequestId += 1;
   state.researchError = null;
@@ -173,8 +167,10 @@ function selectLocation(body, lat, lon) {
   const point = {
     id: `picked-${body}-${lat.toFixed(3)}-${lon.toFixed(3)}`,
     body,
-    name: `${body === 'earth' ? 'Earth' : state.mode === 'mars' ? 'Mars' : 'Moon'} ${Math.abs(lat).toFixed(3)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lon).toFixed(3)}°${lon < 0 ? 'W' : 'E'}`,
-    region: 'User-selected coordinates',
+    name: namedFeature?.name || `${body === 'earth' ? 'Earth' : state.mode === 'mars' ? 'Mars' : 'Moon'} ${Math.abs(lat).toFixed(3)}°${lat < 0 ? 'S' : 'N'}, ${Math.abs(lon).toFixed(3)}°${lon < 0 ? 'W' : 'E'}`,
+    region: namedFeature?.kind ? `${namedFeature.kind} · ${namedFeature.sourceType || 'USGS/IAU named feature'}` : 'User-selected coordinates',
+    kind: namedFeature?.kind || null,
+    locationSource: namedFeature ? (namedFeature.source || { name: 'USGS/IAU Gazetteer of Planetary Nomenclature', url: 'https://planetarynames.wr.usgs.gov/GIS_Downloads' }) : null,
     lat,
     lon,
     custom: true,
@@ -190,6 +186,7 @@ function selectLocation(body, lat, lon) {
   state.ranked = [];
   state.analogId = null;
   if (body === 'earth') {
+    state.earthImageAssessment = null;
     state.customEarthPoint = point;
     state.customTarget = selectedPlanetBeforeEarthClick?.custom ? selectedPlanetBeforeEarthClick : null;
   }
@@ -205,6 +202,15 @@ function selectLocation(body, lat, lon) {
   }
   renderResults();
   updatePair();
+  if (namedFeature && body !== 'earth') {
+    document.querySelectorAll('#planetLocationResults .planet-place').forEach((button) => {
+      const selected = Number(button.dataset.lat) === lat && Number(button.dataset.lon) === lon;
+      button.setAttribute('aria-pressed', String(selected));
+      button.classList.toggle('selected', selected);
+    });
+    const label = namedFeature.kind ? `${namedFeature.name} ${namedFeature.kind}` : namedFeature.name;
+    updatePlanetLocationStatus(`${label} selected at ${lat.toFixed(5)}°, ${lon.toFixed(5)}°. Retrieving coordinate-specific ${body} measurements…`);
+  }
   if (body === 'earth') {
     E.yawT = E.yaw + shortest(lon * D2R - E.yaw);
     E.tiltT = clampT(lat * D2R * .8);
@@ -245,6 +251,9 @@ function selectLocation(body, lat, lon) {
           point.conf = 'Medium';
           point.evidenceType = 'reanalysis_climatology';
           point.summary = 'NASA POWER/MERRA-2 coordinate climatology; only overlapping measured features are compared.';
+          if (payload.location?.name) point.name = payload.location.name;
+          if (payload.location?.country) point.region = [payload.location.subdivision, payload.location.country].filter(Boolean).join(', ');
+          if (payload.location?.source) point.locationSource = { ...payload.location.source, reference: payload.location.reference };
         } else {
           const validation = validatePointProbe(payload, body);
           if (!validation.valid) {
@@ -261,14 +270,15 @@ function selectLocation(body, lat, lon) {
         point.measurements = payload;
         point.measurementStatus = 'validated';
         state.researchError = null;
+        if (namedFeature) updatePlanetLocationStatus(`${namedFeature.name}${namedFeature.kind ? ` ${namedFeature.kind}` : ''} · ${lat.toFixed(5)}°, ${lon.toFixed(5)}° · measurements validated from ${datasetName}.`);
         refresh(true);
         renderLocationImagery();
-        if (state.view === 'compare') refreshCompare();
       })
       .catch((error) => {
         if (!isCurrent()) return;
         point.measurementStatus = 'unavailable';
         state.researchError = `${datasetName} unavailable: ${error.message}`;
+        if (namedFeature) updatePlanetLocationStatus(`${namedFeature.name}: ${datasetName} unavailable — ${error.message}`);
         renderResults();
         updatePair();
         renderLocationImagery();
@@ -301,6 +311,74 @@ $('#targetList').addEventListener('click', (e) => {
   if (b) selectTarget(b.dataset.id);
 });
 
+let locationSearchTimer = null;
+let locationSearchId = 0;
+let locationSearchController = null;
+async function fetchPlanetaryLocationPage(query, body, offset, append, searchId) {
+  const controller = new AbortController();
+  locationSearchController = controller;
+  try {
+    const url = `/api/planetary-locations?body=${encodeURIComponent(body)}&q=${encodeURIComponent(query)}&offset=${offset}&limit=40`;
+    const response = await fetch(url, { cache: 'no-store', signal: controller.signal });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload?.error || `Gazetteer request failed (HTTP ${response.status})`);
+    if (searchId !== locationSearchId || body !== state.mode || query !== $('#planetLocationSearch').value.trim()) return;
+    renderPlanetLocations(payload, { append });
+  } catch (error) {
+    if (error.name === 'AbortError' || searchId !== locationSearchId) return;
+    const message = `USGS/IAU Gazetteer unavailable: ${error.message}`;
+    if (append) {
+      const more = $('#planetLocationResults [data-load-more]');
+      if (more) { more.disabled = false; more.textContent = 'Retry loading more locations'; }
+      updatePlanetLocationStatus(message);
+    }
+    else renderPlanetLocations({ query, error: message, results: [] });
+  }
+}
+
+$('#planetLocationSearch').addEventListener('input', (event) => {
+  const query = event.target.value.trim();
+  const searchId = ++locationSearchId;
+  if (locationSearchTimer) clearTimeout(locationSearchTimer);
+  if (locationSearchController) locationSearchController.abort();
+  renderPlanetLocations({ query, results: [] });
+  if (query.length < 2) return;
+  locationSearchTimer = setTimeout(async () => {
+    const body = state.mode;
+    fetchPlanetaryLocationPage(query, body, 0, false, searchId);
+  }, 250);
+});
+
+$('#planetLocationResults').addEventListener('click', (event) => {
+  const more = event.target.closest('[data-load-more]');
+  if (more) {
+    const query = $('#planetLocationSearch').value.trim();
+    if (query.length < 2) return;
+    more.disabled = true;
+    more.textContent = 'Loading more locations…';
+    const offset = $('#planetLocationResults').querySelectorAll('.planet-place').length;
+    if (locationSearchController) locationSearchController.abort();
+    const searchId = ++locationSearchId;
+    fetchPlanetaryLocationPage(query, state.mode, offset, true, searchId);
+    return;
+  }
+  const button = event.target.closest('.planet-place');
+  if (!button) return;
+  const lat = Number(button.dataset.lat), lon = Number(button.dataset.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return;
+  selectLocation(state.mode, lat, lon, { name: button.dataset.name, kind: button.dataset.kind });
+});
+
+$('#earthRegion').addEventListener('change', (event) => {
+  state.earthRegion = event.target.value;
+  const visible = visibleRanked();
+  state.analogId = visible[0]?.analog.id || null;
+  renderResults(); updatePair();
+  if (state.analogId) flyEarth();
+  renderLocationImagery();
+  if (state.view === 'compare') refreshCompare();
+});
+
 $('#modeSeg').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b || b.dataset.mode === state.mode) return;
@@ -314,6 +392,10 @@ $('#modeSeg').addEventListener('click', (e) => {
   state.analogId = null;
   state.ranked = [];
   $('#app').className = 'wrap mode-' + state.mode;
+  $('#planetLocationSearch').value = '';
+  locationSearchId += 1;
+  if (locationSearchController) locationSearchController.abort();
+  renderPlanetLocations({ query: '', results: [] });
   document.querySelectorAll('#modeSeg button').forEach((button) => {
     button.setAttribute('aria-pressed', String(button.dataset.mode === state.mode));
   });
@@ -321,7 +403,7 @@ $('#modeSeg').addEventListener('click', (e) => {
   renderTargets();
   refresh(false);
   flyOther();
-  if (state.view === 'compare') refreshCompare();
+  renderLocationImagery();
 });
 
 $('#presets').addEventListener('click', (e) => {
@@ -340,6 +422,34 @@ $('#sliders').addEventListener('input', (e) => {
 $('#resultList').addEventListener('click', (e) => {
   const b = e.target.closest('.res');
   if (b) selectAnalog(b.dataset.id);
+});
+
+$('#rerunAnalysis').addEventListener('click', () => {
+  const point = state.customEarthPoint || (state.customTarget?.custom ? state.customTarget : null);
+  if (point) {
+    selectLocation(point.body, point.lat, point.lon, point.name ? {
+      name: point.name, kind: point.kind, source: point.locationSource,
+      sourceType: point.body === 'earth' ? 'reverse geocoder' : 'USGS/IAU Gazetteer'
+    } : null);
+    return;
+  }
+  refresh(true);
+});
+
+$('#exportAnalysis').addEventListener('click', () => {
+  const target = curTarget();
+  const result = visibleRanked().find((entry) => entry.analog.id === state.analogId);
+  if (!target || !result) return;
+  const report = {
+    generatedAt: new Date().toISOString(),
+    target: { body: target.body, name: target.name, latitude: target.lat, longitude: target.lon, dataset: target.measurements?.dataset || target.dataset || null, measurements: target.measurements?.values || target.v || {}, locationSource: target.locationSource || null },
+    earthCandidate: { name: result.analog.name, region: result.analog.region, latitude: result.analog.lat, longitude: result.analog.lon, measurements: result.analog.v || {}, provenance: result.analog.provenance || [] },
+    analysis: { score: result.total, status: result.status, coverage: result.coverage, confidence: result.confidence, certainty: result.certaintyLabel, uncertainty: result.uncertainty, scoreInterval: result.scoreInterval, parameters: result.parts.map((part) => ({ parameter: part.f.label, target: part.t, earth: part.a, similarity: part.na ? null : part.sim, distance: part.d, weight: part.na ? 0 : part.wt, compared: Boolean(part.valid && !part.na) })) },
+    caveats: result.warnings || []
+  };
+  const href = URL.createObjectURL(new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' }));
+  const link = document.createElement('a'); link.href = href; link.download = `astra-${target.body}-analogy-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(href), 1000);
 });
 
 window.addEventListener('resize', () => {
@@ -372,7 +482,7 @@ fetch('/api/auth/status', { cache: 'no-store' })
     const labels = {
       valid: 'NASA Earthdata token validated',
       invalid: 'NASA Earthdata token rejected',
-      missing: 'NASA Earthdata token not configured',
+      missing: 'NASA Earthdata token missing · public datasets still available',
       unavailable: 'NASA Earthdata validation unavailable'
     };
     badge.textContent = labels[earthdata?.status] || 'NASA Earthdata validation unavailable';

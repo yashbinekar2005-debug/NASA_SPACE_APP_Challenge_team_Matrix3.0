@@ -29,7 +29,16 @@ export async function reverseGeocode(lat, lon, { refresh = false } = {}) {
         url: 'https://www.bigdatacloud.com/'
       }
     };
-  } catch {
-    return null;
+  } catch (error) {
+    return {
+      url,
+      fetchedAt: null,
+      error: String(error?.message || error).slice(0, 120),
+      source: {
+        id: 'bigdatacloud',
+        name: 'BigDataCloud reverse geocode',
+        url: 'https://www.bigdatacloud.com/'
+      }
+    };
   }
 }

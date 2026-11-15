@@ -20,6 +20,45 @@ export function renderTargets() {
     .join('');
 }
 
+export function setPlanetLocationStatus(message) {
+  const status = $('#planetLocationStatus');
+  if (status) status.textContent = message;
+}
+
+export const updatePlanetLocationStatus = setPlanetLocationStatus;
+
+export function renderPlanetLocations(payload, { append = false } = {}) {
+  const root = $('#planetLocationResults');
+  if (!root) return;
+  root.querySelector('[data-load-more]')?.remove();
+  if (!append) root.replaceChildren();
+  const rows = Array.isArray(payload?.results) ? payload.results : [];
+  if (!rows.length) {
+    if (!append) setPlanetLocationStatus(payload?.error || (payload?.query?.length >= 2
+      ? 'No named features matched that search in the live USGS/IAU gazetteer.'
+      : 'Enter at least two characters to search IAU location names or feature types.'));
+    return;
+  }
+  const shown = (Number(payload.offset) || 0) + rows.length;
+  setPlanetLocationStatus(`${payload.total.toLocaleString()} gazetteer match${payload.total === 1 ? '' : 'es'}; showing ${shown} of ${payload.total}. Source: USGS/IAU Gazetteer.`);
+  for (const feature of rows) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'planet-place';
+    button.dataset.lat = String(feature.lat); button.dataset.lon = String(feature.lon);
+    button.dataset.name = feature.name; button.dataset.kind = feature.kind || 'IAU-named feature';
+    const name = document.createElement('b'); name.textContent = feature.name;
+    const details = document.createElement('span'); details.textContent = `${feature.kind || 'IAU-named feature'} · ${Math.abs(feature.lat).toFixed(5)}°${feature.lat < 0 ? 'S' : 'N'}, ${Math.abs(feature.lon).toFixed(5)}°${feature.lon < 0 ? 'W' : 'E'}`;
+    button.append(name, details); root.append(button);
+  }
+  if (payload.hasMore) {
+    const more = document.createElement('button');
+    more.type = 'button'; more.className = 'planet-place-more';
+    more.dataset.loadMore = 'true';
+    more.textContent = `Load more named locations (${payload.total - shown} remaining)`;
+    root.append(more);
+  }
+}
+
 export function renderPresets() {
   $('#presets').innerHTML = PRESETS
     .map((p) => `<button type="button" data-id="${p.id}" aria-pressed="false">${p.label}</button>`)

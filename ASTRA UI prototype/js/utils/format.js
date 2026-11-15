@@ -1,7 +1,7 @@
 // Number and text formatting shared by the results list and compare screen.
 
 /** Typographic minus so negative temperatures read correctly. */
-export const MINUS = '−';
+export const MINUS = '\u2212';
 
 /** Unwrap a numeric value or a measurement object. */
 function numeric(value) {
@@ -23,10 +23,10 @@ export function fmt(key, value) {
   const number = numeric(value);
   if (number == null) return 'no data';
   if (key === 'temp') {
-    return (number < 0 ? MINUS : '') + Math.abs(number) + ' °C';
+    return (number < 0 ? MINUS : '') + Math.abs(number) + ' \u00B0C';
   }
   if (key === 'solar') {
-    return (number < 0 ? MINUS : '') + Math.abs(number).toFixed(1) + ' kWh/m²/day';
+    return (number < 0 ? MINUS : '') + Math.abs(number).toFixed(1) + ' kWh/m\u00B2/day';
   }
   return number + ' / 100';
 }
@@ -39,17 +39,17 @@ export function fmtUncertainty(key, measurement) {
       ? measurement.uncertainty
       : null;
   if (sigma == null || !Number.isFinite(sigma)) return '';
-  if (key === 'temp') return '±' + sigma + ' °C';
-  if (key === 'solar') return '±' + sigma.toFixed(1) + ' kWh/m²/day';
+  if (key === 'temp') return '\u00B1' + sigma + ' \u00B0C';
+  if (key === 'solar') return '\u00B1' + sigma.toFixed(1) + ' kWh/m\u00B2/day';
   return '±' + sigma + ' index';
 }
 
 /** Coordinates in a compact, copy-paste friendly form. */
-export function fmtCoords(lat, lon) {
+export function fmtCoords(lat, lon, precision = 1) {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
   const ns = lat >= 0 ? 'N' : 'S';
   const ew = lon >= 0 ? 'E' : 'W';
-  return Math.abs(lat).toFixed(1) + '°' + ns + ' ' + Math.abs(lon).toFixed(1) + '°' + ew;
+  return Math.abs(lat).toFixed(precision) + '\u00B0' + ns + ' ' + Math.abs(lon).toFixed(precision) + '\u00B0' + ew;
 }
 
 /** Round a score and append a percent sign. */

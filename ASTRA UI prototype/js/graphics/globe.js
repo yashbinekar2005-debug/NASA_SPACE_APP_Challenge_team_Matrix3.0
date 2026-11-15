@@ -171,7 +171,10 @@ export function unproject(g, x, y) {
 
 /** Ease towards the target orientation and add a slow idle sway. */
 export function stepGlobe(g, now, reduceMotion) {
+  const dt = g.lastStepAt == null ? 0 : Math.max(0, Math.min(80, now - g.lastStepAt));
+  g.lastStepAt = now;
   if (!g.dragging) {
+    if (!reduceMotion) g.yawT += dt * 0.0000007;
     g.yaw += shortest(g.yawT - g.yaw) * .08;
     g.tilt += (g.tiltT - g.tilt) * .08;
   }

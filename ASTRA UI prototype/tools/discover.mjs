@@ -47,6 +47,9 @@ const args = parseArgs(process.argv.slice(2));
 const GRID_DEG = numberArg(args.grid, 6);
 const SHORTLIST_PER_TARGET = numberArg(args.shortlist, 40);
 const MAX_CANDIDATES = numberArg(args.max, 110);
+// Global discovery is the safe default. The old biased shortlist remains
+// available only as an explicit diagnostic mode for maintainers.
+const ALL_CELLS = Boolean(args['all-cells']) || !Boolean(args['target-shortlist']);
 const REFRESH = Boolean(args.refresh);
 const NO_CAVES = Boolean(args['no-caves']);
 const TARGET_FILTER = args.targets ? String(args.targets).split(',') : null;
@@ -55,7 +58,7 @@ const CELL_LIMIT = numberArg(args['limit-cells'], 0);
 const TARGET_SET = TARGETS.filter((target) => !TARGET_FILTER || TARGET_FILTER.includes(target.id));
 if (!TARGET_SET.length) throw new Error('No targets selected.');
 
-console.log(`ASTRA discovery · grid ${GRID_DEG}° · shortlist ${SHORTLIST_PER_TARGET}/target · max ${MAX_CANDIDATES}`);
+console.log(`ASTRA discovery · grid ${GRID_DEG}° · ${ALL_CELLS ? 'global target-independent pool' : `shortlist ${SHORTLIST_PER_TARGET}/target`} · max ${MAX_CANDIDATES}`);
 console.log(`Contact: ${contact()}`);
 console.log('');
 
@@ -68,6 +71,7 @@ const screeningCells = CELL_LIMIT > 0 ? cells.slice(0, CELL_LIMIT) : cells;
 console.log(`Land grid: ${cells.length} cells; screening ${screeningCells.length}.`);
 
 let done = 0;
+const datasetFailures = [];
 const screened = await mapLimit(screeningCells, 5, async (cell) => {
   try {
     const power = await fetchPower(cell.lat, cell.lon, { refresh: REFRESH });
@@ -79,6 +83,7 @@ const screened = await mapLimit(screeningCells, 5, async (cell) => {
     return { cell, power, v };
   } catch (error) {
     done += 1;
+    datasetFailures.push({ dataset: 'NASA POWER / MERRA-2', id: 'nasa-power', latitude: cell.lat, longitude: cell.lon, error: shortError(error) });
     console.warn(`  climate failed at ${cell.lat},${cell.lon}: ${shortError(error)}`);
     return null;
   }
@@ -98,7 +103,13 @@ if (!usable.length) {
 const weights = PRESETS[0].w;
 const shortlist = new Map();
 
-for (const target of TARGET_SET) {
+if (ALL_CELLS) {
+  for (const entry of usable) {
+    shortlist.set(entry.cell.id, { entry, targetId: null, reason: 'global_grid', screen: null, targets: new Set() });
+  }
+}
+
+for (const target of (ALL_CELLS ? [] : TARGET_SET)) {
   const scored = usable
     .map((entry) => ({
       entry,
@@ -148,7 +159,7 @@ for (const target of TARGET_SET) {
 }
 
 let candidates = [...shortlist.values()];
-if (candidates.length > MAX_CANDIDATES) {
+if (!ALL_CELLS && candidates.length > MAX_CANDIDATES) {
   candidates.sort((a, b) => b.screen - a.screen);
   candidates = candidates.slice(0, MAX_CANDIDATES);
   console.log(`\nCapped enriched candidates to ${candidates.length} (max ${MAX_CANDIDATES}).`);
@@ -175,12 +186,30 @@ console.log(`\nValidating ${candidates.length} shortlisted cells${caveCells.size
 let enrichedCount = 0;
 const enriched = await mapLimit(candidates, 4, async (item) => {
   const { cell, power } = item.entry;
+  const validationErrors = {};
   const [relief, soil, geology, geocode] = await Promise.all([
-    fetchRelief(cell.lat, cell.lon, { refresh: REFRESH }).catch(() => null),
-    fetchSoilGrids(cell.lat, cell.lon, { refresh: REFRESH }).catch(() => null),
-    fetchGeology(cell.lat, cell.lon, { refresh: REFRESH }).catch(() => null),
-    reverseGeocode(cell.lat, cell.lon, { refresh: REFRESH }).catch(() => null)
+    fetchRelief(cell.lat, cell.lon, { refresh: REFRESH }).catch((error) => { validationErrors.srtm = shortError(error); return null; }),
+    fetchSoilGrids(cell.lat, cell.lon, { refresh: REFRESH }).catch((error) => { validationErrors.soilgrids = shortError(error); return null; }),
+    fetchGeology(cell.lat, cell.lon, { refresh: REFRESH }).catch((error) => { validationErrors.macrostrat = shortError(error); return null; }),
+    reverseGeocode(cell.lat, cell.lon, { refresh: REFRESH }).catch((error) => { validationErrors.geocode = shortError(error); return null; })
   ]);
+  if (!relief) validationErrors.srtm ||= (cell.lat > 60 || cell.lat < -56)
+    ? 'Outside SRTM coverage; relief is excluded.'
+    : 'No valid 3×3 elevation result returned; relief is excluded.';
+  if (!soil) validationErrors.soilgrids ||= 'No valid SoilGrids texture result returned; texture is unavailable.';
+  if (!geology) validationErrors.macrostrat ||= 'No mapped geology unit or valid response at this coordinate.';
+  if (geocode?.error) validationErrors.geocode ||= `BigDataCloud reverse geocoder failed: ${geocode.error}`;
+  if (!geocode) validationErrors.geocode ||= 'No reverse-geocoder label was returned; coordinates remain the location identifier.';
+  for (const [id, error] of Object.entries(validationErrors)) {
+    const names = {
+      srtm: 'OpenTopoData / NASA SRTM 90 m',
+      soilgrids: 'ISRIC SoilGrids 2.0',
+      macrostrat: 'Macrostrat geologic map',
+      geocode: 'BigDataCloud reverse geocoder',
+      aod55: 'NASA POWER AOD_55'
+    };
+    datasetFailures.push({ id: id === 'aod55' ? 'nasa-power-aod-55' : id, dataset: names[id] || id, latitude: cell.lat, longitude: cell.lon, error });
+  }
 
   let caves = null;
   if (caveCells.has(cell.id)) {
@@ -198,6 +227,7 @@ const enriched = await mapLimit(candidates, 4, async (item) => {
     geology,
     geocode,
     caves,
+    validationErrors,
     targets: item.targets,
     screenScore: item.screen
   });
@@ -224,10 +254,13 @@ const snapshot = {
     validated: built.length
   },
   shortlist: {
+    mode: ALL_CELLS ? 'target-independent global land grid' : 'per-target climate shortlist',
     perTarget: SHORTLIST_PER_TARGET,
     maxCandidates: MAX_CANDIDATES,
-    targets: TARGET_SET.map((target) => target.id)
+    targets: ALL_CELLS ? [] : TARGET_SET.map((target) => target.id)
   },
+  unavailableDatasets: summarizeFailures(datasetFailures),
+  datasetFailures,
   sources: sourceRegistry(),
   candidates: built.sort(compareCandidates)
 };
@@ -255,7 +288,8 @@ console.log(`Cache: ${JSON.stringify(cacheStats())}`);
 /* Candidate builder                                                   */
 /* ------------------------------------------------------------------ */
 
-function buildCandidate({ cell, power, relief, soil, geology, geocode, caves, targets, screenScore }) {
+function buildCandidate({ cell, power, relief, soil, geology, geocode, caves, targets, screenScore, validationErrors = {} }) {
+  if (power.aerosolError) validationErrors.aod55 = power.aerosolError;
   const temp = surfaceTemperature(power);
   const solar = solarIllumination(power);
   const dry = dryness(power);
@@ -281,16 +315,27 @@ function buildCandidate({ cell, power, relief, soil, geology, geocode, caves, ta
       note: measurement.source?.note || null
     });
   }
+  if (Number.isFinite(power.annual.aod55)) {
+    provenance.push({
+      key: 'aod55',
+      source: power.aerosolSource,
+      value: power.annual.aod55,
+      unit: 'dimensionless',
+      uncertainty: null,
+      evidence_class: null,
+      note: power.aerosolSource?.note || 'Aerosol optical depth; not a mineral-dust concentration.'
+    });
+  }
 
-  const srcCount = ['power', 'relief', 'soil', 'geology', 'geocode', 'caves']
+  const srcCount = ['power', 'relief', 'soil', 'geology', 'caves']
     .filter((key) => ({ power, relief, soil, geology, geocode, caves })[key]).length;
   const conf = srcCount >= 5 && soilFeature && terrain ? 'High'
     : srcCount >= 3 ? 'Medium' : 'Low';
 
-  const label = geocode?.locality || geocode?.subdivision || geocode?.country || 'Unnamed cell';
+  const label = geocode?.locality || geocode?.subdivision || geocode?.country || `Grid cell ${coordId(cell.lat, cell.lon)}`;
   // `region` is a locator label only. Coordinates are stored separately in
   // `lat`/`lon` and formatted by the UI, so they are not repeated here.
-  const regionParts = [geocode?.country].filter(Boolean);
+  const regionParts = [geocode?.country || 'Region label unavailable'];
   const terrainSeed = hashSeed(cell.id);
 
   const limitations = [];
@@ -326,6 +371,51 @@ function buildCandidate({ cell, power, relief, soil, geology, geocode, caves, ta
     limitations,
     provenance,
     sourceIds: [...new Set(provenance.map((entry) => entry.source?.id).filter(Boolean))],
+    siteContext: {
+      climate: {
+        source: power.source,
+        retrievedAt: power.fetchedAt,
+        spatialResolution: 'NASA POWER gridded point product; native grid approximately 0.5° (product dependent)',
+        period: power.source?.period || '2001-2020',
+        annual: power.annual,
+        monthly: power.monthly
+      },
+      atmosphere: {
+        pressureKpa: power.annual.pressureKpa,
+        relativeHumidityPercent: power.annual.rh2m,
+        windSpeedMs: power.annual.windMs,
+        source: power.source,
+        period: power.source?.period || '2001-2020'
+      },
+      dust: {
+        status: Number.isFinite(power.annual.aod55) ? 'measured_aerosol_proxy' : 'unavailable',
+        aerosolOpticalDepth055: power.annual.aod55,
+        unit: power.aerosolSource?.unit || 'dimensionless',
+        uncertainty: null,
+        source: power.aerosolSource || null,
+        reason: Number.isFinite(power.annual.aod55)
+          ? power.aerosolSource.note
+          : 'NASA POWER AOD_55 was unavailable at this coordinate; no dust value is inferred.'
+      },
+      land: {
+        elevationM: power.elevation,
+        lithology: geology?.primary?.lith || null,
+        lithologyName: geology?.primary?.name || null,
+        geologicAge: geology?.primary?.age || null,
+        geologicAgeMa: geology?.primary?.ageMa ?? null,
+        soilTexture: soil?.values || null,
+        source: geology?.source || soil?.source || null
+      },
+      location: {
+        latitude: cell.lat,
+        longitude: cell.lon,
+        locality: label,
+        country: geocode?.country || null,
+        continent: geocode?.continent || null,
+        geocoder: geocode?.source || null
+      },
+      validationErrors
+    },
     screen: {
       provisional_score: Number.isFinite(screenScore) ? Math.round(screenScore) : null,
       provisional_scope: 'climate-only screening before terrain, soil and geology validation',
@@ -407,9 +497,18 @@ function sourceRegistry() {
       id: 'nasa-power',
       name: 'NASA POWER / MERRA-2 monthly climatology',
       url: 'https://power.larc.nasa.gov/',
-      role: 'temperature, solar irradiance, precipitation, humidity, snow, soil wetness, frost days',
+      role: 'temperature, solar irradiance, precipitation, humidity, snow, soil wetness and frost days',
       auth: 'None (public)',
-      period: '2001-2025'
+      period: '2001-2020'
+    },
+    {
+      id: 'nasa-power-aod-55',
+      name: 'NASA POWER CERES SYN1deg AOD_55 at 0.55 µm',
+      url: 'https://power.larc.nasa.gov/docs/methodology/data/sources_clds_aerosols/',
+      role: 'column aerosol optical depth; aerosol mix is not mineral-dust concentration',
+      auth: 'None (public)',
+      period: '2001-2020 climatology',
+      resolution: '1° × 1°'
     },
     {
       id: 'soilgrids',
@@ -458,6 +557,9 @@ function validateSnapshot(snapshot) {
   for (const candidate of snapshot.candidates) {
     if (ids.has(candidate.id)) errors.push(`duplicate id ${candidate.id}`);
     ids.add(candidate.id);
+    if (candidate.discovered !== true || !Number.isFinite(candidate.lat) || !Number.isFinite(candidate.lon)) {
+      errors.push(`${candidate.id} does not have an actual discovered coordinate`);
+    }
     if (!candidate.v?.temp || !candidate.v?.solar || !candidate.v?.dry) {
       errors.push(`${candidate.id} missing required climate features`);
     }
@@ -465,6 +567,9 @@ function validateSnapshot(snapshot) {
       const value = candidate.v[key]?.value;
       if (value != null && !Number.isFinite(Number(value))) {
         errors.push(`${candidate.id} ${key} is not finite`);
+      }
+      if (value != null && (!candidate.v[key]?.measurementType || !candidate.v[key]?.source?.url)) {
+        errors.push(`${candidate.id} ${key} is missing measurement type or source reference`);
       }
     }
   }
@@ -488,4 +593,15 @@ function numberArg(value, fallback) {
 
 function shortError(error) {
   return String(error?.message || error).slice(0, 120);
+}
+
+function summarizeFailures(failures) {
+  const byDataset = new Map();
+  for (const failure of failures) {
+    const entry = byDataset.get(failure.id) || { id: failure.id, name: failure.dataset, count: 0, examples: [] };
+    entry.count += 1;
+    if (entry.examples.length < 3) entry.examples.push({ latitude: failure.latitude, longitude: failure.longitude, error: failure.error });
+    byDataset.set(failure.id, entry);
+  }
+  return [...byDataset.values()];
 }

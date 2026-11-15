@@ -4,6 +4,7 @@ import { TARGETS, analogOf } from '../data/index.js';
 import { state, curTarget } from '../core/state.js';
 import { makeGlobe, buildGeom, renderGlobe, project, unproject, stepGlobe, clampT } from '../graphics/globe.js';
 import { texture } from '../graphics/textures.js';
+import { visibleRanked } from './results.js';
 
 /**
  * The globe stage: two canvases plus one overlay canvas for pins, arcs
@@ -125,6 +126,27 @@ function label(c, x, y, text, col) {
   c.fillText(text, lx + 6, y - 15);
 }
 
+function drawDirectionMark(c, globe, lat, lon, text, color) {
+  const p = project(globe, lat, lon);
+  if (p.z <= .08) return;
+  c.save();
+  c.globalAlpha = .9;
+  c.strokeStyle = color;
+  c.lineWidth = 1;
+  c.beginPath(); c.arc(p.x, p.y, 3.2, 0, TAU); c.stroke();
+  c.fillStyle = color;
+  c.beginPath(); c.arc(p.x, p.y, 1.2, 0, TAU); c.fill();
+  c.restore();
+  label(c, p.x, p.y, text, color);
+}
+
+function drawGlobeDirections(c, globe, color) {
+  drawDirectionMark(c, globe, 90, 0, 'N ↑', color);
+  drawDirectionMark(c, globe, -90, 0, 'S ↓', color);
+  drawDirectionMark(c, globe, 0, 90, 'E →', color);
+  drawDirectionMark(c, globe, 0, -90, 'W ←', color);
+}
+
 function drawOverlay(now) {
   const c = octx;
   c.setTransform(SC, 0, 0, SC, 0, 0);
@@ -134,7 +156,10 @@ function drawOverlay(now) {
   const t = curTarget();
   const acc = state.mode === 'moon' ? '#38BDF8' : '#F97316';
   const EARTH = '#34D399';
-  const top = state.ranked.slice(0, 6);
+  drawGlobeDirections(c, E, EARTH);
+  drawGlobeDirections(c, O, acc);
+  const visible = visibleRanked();
+  const top = visible.slice(0, 6);
 
   // Arcs from the target to the best Earth matches.
   if (t) {
@@ -175,7 +200,7 @@ function drawOverlay(now) {
 
   // Earth pins: selected, top-six, then the rest.
   const topIds = new Set(top.map((r) => r.analog.id));
-  state.ranked.forEach((r) => {
+  visible.forEach((r) => {
     const a = r.analog;
     const p = project(E, a.lat, a.lon);
     if (p.z <= .05) return;

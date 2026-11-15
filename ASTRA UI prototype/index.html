@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Analog Finder · ASTRA</title>
+  <title>ASTRA &middot; ATLAS</title>
   <meta name="description" content="Discovers Earth analog test sites for Moon and Mars exploration targets from real climate, terrain, soil and geological data, with weighted similarity, propagated uncertainty and the differences no Earth site can replicate.">
   <meta name="theme-color" content="#0B0F19">
 
@@ -26,7 +26,7 @@
           <circle cx="31.5" cy="11" r="2.6" fill="#38BDF8"/>
         </svg>
         <div>
-          <h1>Analog Finder</h1>
+          <h1>ASTRA</h1>
           <p>Earth test sites discovered from climate, terrain and geological data</p>
         </div>
       </div>
@@ -40,28 +40,31 @@
     </header>
 
     <main id="viewExplore" class="explore">
-      <section class="panel p-targets" aria-label="Space target">
-        <span class="eyebrow">Step 1 · Space target</span>
+      <section class="panel p-body" aria-label="Planetary body">
+        <span class="eyebrow">Step 1 · Choose planetary body</span>
         <div class="seg" id="modeSeg" role="group" aria-label="Body">
           <button type="button" data-mode="moon" aria-pressed="true">Moon</button>
           <button type="button" data-mode="mars" aria-pressed="false">Mars</button>
         </div>
-        <div class="targets" id="targetList"></div>
       </section>
 
-      <section class="panel p-prio" aria-label="Priorities">
-        <span class="eyebrow">Step 2 · What matters most</span>
-        <div class="presets" id="presets"></div>
-        <div id="sliders"></div>
-        <p class="legend-note">Indexes run from 0 (none) to 100 (very strong).</p>
+      <section class="panel p-targets" aria-label="Planetary location">
+        <span class="eyebrow">Step 2 · Select planetary location</span>
+        <label class="location-label" for="planetLocationSearch">Search IAU location names or feature types</label>
+        <input id="planetLocationSearch" class="location-search" type="search" minlength="2" maxlength="80" autocomplete="off" placeholder="Olympus Mons, crater, basin…" aria-describedby="planetLocationStatus">
+        <p id="planetLocationStatus" class="location-status" role="status">Search the USGS/IAU planetary feature gazetteer, or click any point on the globe.</p>
+        <div id="planetLocationResults" class="planet-location-results" aria-label="Named planetary locations"></div>
+        <details class="preset-locations"><summary>Literature reference profiles</summary>
+        <div class="targets" id="targetList"></div>
+        </details>
       </section>
 
       <section class="panel stage" aria-label="Earth and target globes">
         <div class="canvasbox" id="canvasbox">
-          <canvas id="cvEarth" aria-label="Rotating Earth globe" role="img"></canvas>
-          <canvas id="cvOther" aria-label="Rotating Moon or Mars globe" role="img"></canvas>
+          <canvas id="cvEarth" aria-label="Rotating Earth globe with north, south, east, and west markers" role="img"></canvas>
+          <canvas id="cvOther" aria-label="Rotating Moon or Mars globe with north, south, east, and west markers" role="img"></canvas>
           <canvas id="overlay" aria-hidden="true"></canvas>
-          <span class="hint">Drag to rotate · click a Moon or Mars point to probe it, or an Earth point to inspect it</span>
+          <span class="hint">N/S/E/W markers follow each globe · click any planetary or Earth coordinate</span>
         </div>
         <div class="pairbar">
           <div class="pair-names">
@@ -75,15 +78,41 @@
       </section>
 
       <section class="panel p-results" aria-label="Ranked Earth matches">
-        <span class="eyebrow">Step 3 · Best Earth matches</span>
+        <section class="earth-region-step" aria-label="Earth search region">
+          <span class="eyebrow">Step 3 · Choose Earth continent or region</span>
+          <label for="earthRegion">Earth region</label>
+          <select id="earthRegion" class="region-select">
+            <option value="all">All Earth regions</option>
+            <option value="Africa">Africa</option>
+            <option value="Asia">Asia</option>
+            <option value="Europe">Europe</option>
+            <option value="North America">North America</option>
+            <option value="South America">South America</option>
+            <option value="Oceania">Oceania</option>
+            <option value="Antarctica">Antarctica</option>
+          </select>
+          <p class="cap">Filters measured Earth matches by region. You can also click any visible Earth coordinate on the globe.</p>
+        </section>
+        <details class="weight-options">
+          <summary>Adjust comparison weights</summary>
+          <div class="presets" id="presets"></div>
+          <div id="sliders"></div>
+          <p class="legend-note">Indexes run from 0 (none) to 100 (very strong).</p>
+        </details>
+        <span class="eyebrow step-four">Step 4 · Review similarity results</span>
         <h2 id="resTitle">Ranked sites</h2>
+        <p id="resOverview" class="result-overview" aria-live="polite">Choose a planetary target to calculate a current comparison.</p>
         <p class="resmeta" id="resMeta"></p>
         <ol id="resultList"></ol>
+        <div class="analysis-actions" aria-label="Analysis actions">
+          <button type="button" id="rerunAnalysis">Recalculate analysis</button>
+          <button type="button" id="exportAnalysis" disabled>Download analysis JSON</button>
+        </div>
         <p class="fp-key">Small bars show how well each factor matches, left to right: temperature, solar illumination, ice, soil, terrain, dryness, lava tube. Scores are ranked live from the weights you choose.</p>
         <details class="how">
           <summary>How the score and the sites are produced</summary>
           <ul>
-            <li>The Earth is divided into a land grid. Every cell gets a climate screen from NASA POWER / MERRA-2. The best cells per target are then validated with SRTM relief, SoilGrids texture, Macrostrat geology and a reverse geocoder; OSM cave entrances are used where the service responds.</li>
+            <li>Earth screening cells come from a target-independent global land grid. NASA POWER climate is retrieved first; cells are then enriched with SRTM relief, SoilGrids texture, Macrostrat geology and reverse-geocoded labels where available. A missing source is shown as unavailable and never replaced with a guessed value.</li>
             <li>No analog site is predefined. Place names are labels from a reverse geocoder; every factor value comes from the dataset named in the evidence trail.</li>
             <li>Clicking any visible point on the Moon or Mars globe probes that exact coordinate through the server: LRO LOLA relief, LRO Diviner hourly temperatures, Kaguya MI FeO, MOLA relief, USGS SIM3292 geology and the Mars Climate Database. The measured values enter the same seven-factor model as a published target.</li>
             <li>Mars Climate Database values are a model climatology, not surface-station measurements, and the interface labels them that way. Seasonal spread is shown separately and is not a published model error.</li>
@@ -103,8 +132,8 @@
     <main id="viewCompare" hidden></main>
 
     <p class="foot">
-      Earth sites are generated by <code>node tools/discover.mjs</code> from NASA POWER, ISRIC SoilGrids, SRTM,
-      Macrostrat, OpenStreetMap and a reverse geocoder, then committed as a snapshot so the ranking works offline.
+      Earth candidates are globally generated screening-grid cells from NASA POWER, ISRIC SoilGrids, SRTM,
+      Macrostrat and a reverse geocoder. Rankings recalculate from the selected planetary coordinate and current weights.
       Published targets use documented measurements. Points you click are probed live from LRO LOLA, LRO Diviner,
       Kaguya MI, MOLA, USGS SIM3292 and the Mars Climate Database; MCD values are modelled climatology.
       Real 3×3 DEM samples replace the generated terrain preview for probed points.

@@ -8,6 +8,9 @@ import {
 import { fmt, fmtUncertainty, fmtCoords } from '../utils/format.js';
 import { makeTerrain, sizeTerrain, drawTerrain } from '../graphics/terrain.js';
 import { nonReplicableFor } from '../data/planetary.js';
+import { pointImage, findClearestEarthCapture } from '../core/imagery.js';
+import { visibleRanked } from './results.js';
+import { siteDetailHtml, researchPaperHtml } from './report.js';
 
 /**
  * Compare screen: two site cards with terrain previews, a weighted score
@@ -19,6 +22,16 @@ import { nonReplicableFor } from '../data/planetary.js';
  */
 
 let terrains = [];
+
+function actualImageHtml(body, lat, lon, label) {
+  const isEarth = body === 'earth';
+  const image = pointImage(body, lat, lon, isEarth ? state.earthImageDate : null, state.earthImageSatellite || 'Terra');
+  const imageMarkup = image.url
+    ? `<img class="actual-image" src="${esc(image.url)}" data-fallback="${esc(image.fallback || '')}" data-fallbacks="${esc(JSON.stringify(image.fallbacks || []))}" alt="${esc(image.source)} near ${lat.toFixed(5)}°, ${lon.toFixed(5)}°"><figcaption>${esc(image.source)} · ${esc(label)} · ${esc(image.citation)} <a href="${esc(image.url)}" target="_blank" rel="noopener noreferrer">Open image source</a></figcaption>`
+    : `<div class="image-date-empty">Choose a date to view the actual NASA satellite capture.</div><figcaption>${esc(label)} · ${esc(image.citation)}</figcaption>`;
+  const controls = isEarth ? `<div class="capture-controls"><label for="earthCaptureDate">Exact capture date</label><input id="earthCaptureDate" type="date" max="${new Date().toISOString().slice(0, 10)}" value="${esc(state.earthImageDate || '')}"><button type="button" class="ghost" id="loadEarthCapture">Show this date</button><button type="button" class="ghost" id="latestEarthCapture">Show latest available</button><label for="earthCaptureLookback">Search earlier</label><select id="earthCaptureLookback"><option value="14">14 days</option><option value="30" selected>30 days</option><option value="60">60 days</option><option value="90">90 days</option><option value="180">180 days</option></select><button type="button" class="ghost" id="findClearEarthCapture">Find clearest capture</button><p id="earthCaptureStatus" class="cap" role="status">The image shows NASA GIBS' latest available capture. Choose a date for a specific observation or search earlier captures for a clearer view.</p></div>` : '';
+  return `${controls}<figure class="compare-image">${imageMarkup}</figure>`;
+}
 
 /** Escape every value that can come from an API or a generated snapshot. */
 function esc(value) {
@@ -59,6 +72,7 @@ function unavailableText(part) {
   if (part.reason === 'not_applicable') return 'Target has no mapped tube';
   if (part.reason === 'missing_target') return 'No target data';
   if (part.reason === 'missing_data') return 'No comparable data';
+  if (part.reason === 'incompatible_measurements') return part.note || 'Evidence types are not scientifically comparable';
   return 'Not used';
 }
 
@@ -311,7 +325,8 @@ export function renderCompare({ onBack } = {}) {
     $('#viewCompare [data-back]').addEventListener('click', back);
     return;
   }
-  const r = state.ranked.find((x) => x.analog.id === state.analogId) || state.ranked[0];
+  const visible = visibleRanked();
+  const r = visible.find((x) => x.analog.id === state.analogId) || visible[0];
   if (!r) {
     if (t?.custom || state.customEarthPoint) {
       const differences = nonReplicableHtml(nonReplicableFor(t?.body || state.mode));
@@ -410,7 +425,9 @@ export function renderCompare({ onBack } = {}) {
       `<article class="panel site site-space">
         <span class="eyebrow">${sp} · Space target</span>
         <h3>${esc(t.name)}</h3>
-        <p class="region">${esc(t.region)}</p>
+        <p class="region">${esc(t.region)} · ${esc(fmtCoords(t.lat, t.lon, t.custom ? 5 : 1))}</p>
+        ${actualImageHtml(t.body, t.lat, t.lon, 'Planetary coordinate imagery')}
+        <button type="button" class="ghost site-details-button" data-site-detail="planet">Open planetary data</button>
         ${demPreview || `<canvas class="terrain" id="tcSpace" aria-label="Terrain preview of ${esc(t.name)}" role="img"></canvas>
         <p class="cap">Generated terrain preview. Drag to turn it.</p>`}
         ${factRows(t)}
@@ -441,7 +458,9 @@ export function renderCompare({ onBack } = {}) {
       `<article class="panel site site-earth">
         <span class="eyebrow">Earth analog · ${state.customEarthPoint ? 'selected coordinate' : 'discovered'}</span>
         <h3>${esc(a.name)}</h3>
-        <p class="region">${esc(a.region)} · ${esc(fmtCoords(a.lat, a.lon))}</p>
+        <p class="region">${esc(a.region)} · ${esc(fmtCoords(a.lat, a.lon, a.custom ? 5 : 1))}</p>
+        ${actualImageHtml('earth', a.lat, a.lon, 'Earth candidate imagery')}
+        <button type="button" class="ghost site-details-button" data-site-detail="earth">Open full Earth site report</button>
         <canvas class="terrain" id="tcEarth" aria-label="Terrain preview of ${esc(a.name)}" role="img"></canvas>
         <p class="cap">Generated terrain preview. Drag to turn it.</p>
         ${factRows(a)}
@@ -470,6 +489,7 @@ export function renderCompare({ onBack } = {}) {
         ${warningsHtml}
         <div class="actions">
           <button type="button" class="cta" id="copyBtn">Copy summary</button>
+          <button type="button" class="ghost" id="pdfReportBtn">Save research report as PDF</button>
           <button type="button" class="ghost" id="backBtn2">Pick another site</button>
           <span class="status" id="copyStatus" role="status"></span>
         </div>
@@ -485,11 +505,118 @@ export function renderCompare({ onBack } = {}) {
     '</section>';
 
   terrains = [];
+  const openSiteDetails = (earthSide) => {
+    const dialogHtml = siteDetailHtml(t, a, earthSide ? 'earth' : 'planet', r);
+    $('#viewCompare .site-report-dialog')?.remove();
+    $('#viewCompare').insertAdjacentHTML('beforeend', dialogHtml);
+    $('#viewCompare .site-report-dialog').showModal();
+  };
+
+  const captureDate = $('#earthCaptureDate');
+  if (captureDate) captureDate.addEventListener('change', () => {
+    state.earthImageDate = captureDate.value || null;
+    state.earthImageSatellite = 'Terra';
+    state.earthImageAssessment = null;
+    renderCompare({ onBack: back });
+  });
+  const loadCaptureButton = $('#loadEarthCapture');
+  if (loadCaptureButton) loadCaptureButton.addEventListener('click', () => {
+    const date = $('#earthCaptureDate')?.value;
+    if (!date) { const status = $('#earthCaptureStatus'); if (status) status.textContent = 'Choose an observation date first.'; return; }
+    state.earthImageDate = date;
+    state.earthImageSatellite = 'Terra';
+    state.earthImageAssessment = null;
+    renderCompare({ onBack: back });
+  });
+  const latestCaptureButton = $('#latestEarthCapture');
+  if (latestCaptureButton) latestCaptureButton.addEventListener('click', () => {
+    state.earthImageDate = null;
+    state.earthImageSatellite = 'Terra';
+    state.earthImageAssessment = null;
+    renderCompare({ onBack: back });
+  });
+  const clearButton = $('#findClearEarthCapture');
+  if (clearButton) clearButton.addEventListener('click', async () => {
+    const status = $('#earthCaptureStatus');
+    const enteredDate = $('#earthCaptureDate')?.value || '';
+    const chosenDate = enteredDate || new Date().toISOString().slice(0, 10);
+    const lookback = Number($('#earthCaptureLookback')?.value || 30);
+    const targetScope = `${t.body}:${t.id}:${t.lat}:${t.lon}`;
+    const siteScope = `${a.id}:${a.lat}:${a.lon}`;
+    clearButton.disabled = true;
+    if (status) status.textContent = 'Checking NASA Terra and Aqua cloud observations…';
+    try {
+      const assessment = await findClearestEarthCapture(a.lat, a.lon, chosenDate, lookback, (progress) => {
+        if (status && progress.completed < progress.total) status.textContent = `Checking NASA observations: ${progress.completed} of ${progress.total}…`;
+      });
+      const currentTarget = curTarget();
+      const currentSite = state.customEarthPoint || visibleRanked().find((item) => item.analog.id === state.analogId)?.analog;
+      if (!currentTarget || `${currentTarget.body}:${currentTarget.id}:${currentTarget.lat}:${currentTarget.lon}` !== targetScope ||
+        !currentSite || `${currentSite.id}:${currentSite.lat}:${currentSite.lon}` !== siteScope ||
+        ($('#earthCaptureDate')?.value || '') !== enteredDate) return;
+      state.earthImageDate = assessment.date;
+      state.earthImageSatellite = assessment.satellite;
+      state.earthImageAssessment = assessment;
+      renderCompare({ onBack: back });
+      const resultStatus = $('#earthCaptureStatus');
+      if (resultStatus) resultStatus.textContent = `Clearest capture found: ${assessment.date} · ${assessment.satellite}; ${Math.round(assessment.coveragePercent)}% window coverage and ${Math.round(assessment.clearPixelPercent)}% of observed pixels in lower cloud-fraction classes. ${assessment.note}`;
+    } catch (error) {
+      if (status) status.textContent = `NASA GIBS imagery search failed: ${error.message}`;
+    } finally {
+      const button = $('#findClearEarthCapture');
+      if (button) button.disabled = false;
+    }
+  });
+  document.querySelectorAll('#viewCompare .actual-image').forEach((img) => {
+    img.onerror = () => {
+      let fallbacks = [];
+      try { fallbacks = JSON.parse(img.dataset.fallbacks || '[]'); } catch { /* malformed metadata: try legacy fallback */ }
+      if (!fallbacks.length && img.dataset.fallback) fallbacks = [img.dataset.fallback];
+      const fallbackIndex = Number(img.dataset.fallbackIndex || 0);
+      if (fallbackIndex < fallbacks.length) {
+        img.dataset.fallbackIndex = String(fallbackIndex + 1);
+        img.src = fallbacks[fallbackIndex];
+        return;
+      }
+      img.remove();
+      const figure = img.closest('.compare-image');
+      figure?.classList.add('image-unavailable');
+      let note = figure?.querySelector('.image-load-error');
+      if (figure && !note) { note = document.createElement('p'); note.className = 'image-load-error'; figure.prepend(note); }
+      if (note) note.textContent = 'NASA imagery is unavailable for this coordinate or capture date. Choose another capture date or retry later.';
+    };
+  });
   if ($('#tcSpace')) terrains.push(makeTerrain($('#tcSpace'), terrainParams(t, t.body), hue));
   if ($('#tcEarth')) terrains.push(makeTerrain($('#tcEarth'), terrainParams(a, 'earth'), 160));
 
   $('#backBtn').onclick = back;
   $('#backBtn2').onclick = back;
+
+  document.querySelectorAll('#viewCompare .actual-image').forEach((img) => {
+    img.tabIndex = 0;
+    img.setAttribute('role', 'button');
+    img.addEventListener('click', () => {
+      openSiteDetails(Boolean(img.closest('.site-earth')));
+    });
+    img.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); img.click(); }
+    });
+  });
+  document.querySelectorAll('#viewCompare .site-details-button').forEach((button) => {
+    button.addEventListener('click', () => openSiteDetails(button.dataset.siteDetail === 'earth'));
+  });
+
+  $('#pdfReportBtn').onclick = () => {
+    const reportWindow = window.open('', '_blank');
+    if (!reportWindow) {
+      const status = $('#copyStatus');
+      if (status) status.textContent = 'Allow a new window to open to print or save the PDF.';
+      return;
+    }
+    reportWindow.document.open();
+    reportWindow.document.write(researchPaperHtml(t, a, r));
+    reportWindow.document.close();
+  };
 
   $('#copyBtn').onclick = () => {
     const txt = summaryText(r, t);

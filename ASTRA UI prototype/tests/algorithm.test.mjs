@@ -1,5 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { powerUrl } from '../tools/lib/sources/power.mjs';
+
+test('NASA POWER requests the documented 2001-2020 climatology without transmitting an API key', () => {
+  const url = new URL(powerUrl(18.4, -77.7));
+  assert.equal(url.searchParams.get('start'), '2001');
+  assert.equal(url.searchParams.get('end'), '2020');
+  assert.equal(url.searchParams.has('api_key'), false);
+  assert.equal(url.searchParams.has('NASA_POWER_API_KEY'), false);
+});
 
 import {
   capabilityDistance,
@@ -34,6 +44,8 @@ import {
 import { ANALOGS, DISCOVERY, FACTORS, PRESETS, TARGETS, nonReplicableFor } from '../js/data/index.js';
 import { fmt, fmtCoords, fmtUncertainty } from '../js/utils/format.js';
 import { state, curTarget } from '../js/core/state.js';
+import { pointImage } from '../js/core/imagery.js';
+import { researchPaperHtml, siteDetailHtml } from '../js/ui/report.js';
 import { project, unproject } from '../js/graphics/globe.js';
 import { rankMeasuredMarsPoint, validateMarsPointResponse, rankMeasuredEarthPoint, validateEarthPointResponse, rankMeasuredPoint, validatePointProbe } from '../js/core/research.js';
 import {
@@ -49,6 +61,52 @@ import {
 import { parseMcdSeries, summarizeMcdSeries } from '../tools/lib/sources/mcd.mjs';
 
 /* ----------------------------- fixtures ----------------------------- */
+
+test('Earth shows NASA GIBS latest available imagery by default and supports exact dates', () => {
+  const latest = pointImage('earth', 37.5, -122.3);
+  assert.ok(latest.url, 'Earth imagery should display without requiring a date-picker interaction');
+  assert.match(latest.url, /TIME=default/, 'default imagery must use the NASA service default/latest available date');
+  assert.equal(latest.latest, true);
+  assert.equal(latest.fallback, null, 'failed date imagery must not silently switch to a different capture');
+  assert.match(latest.url, /FORMAT=image%2Fpng/);
+  assert.match(latest.url, /TRANSPARENT=true/);
+  assert.equal(latest.fallbacks.length, 30, 'empty latest imagery should try recent dated NASA captures');
+  assert.match(latest.fallbacks[0], new RegExp(`TIME=${latest.fallbackDates[0]}`));
+  const today = new Date().toISOString().slice(0, 10);
+  assert.ok(latest.fallbackDates.every((date) => date < today), 'fallback captures must not request future dates');
+  assert.ok(latest.fallbackDates.every((date, index, dates) => index === 0 || dates[index - 1] > date), 'fallback captures should be tried newest first');
+  const selected = pointImage('earth', 37.5, -122.3, '2024-06-12', 'Aqua');
+  assert.ok(selected.url);
+  assert.match(selected.url, /MODIS_Aqua_CorrectedReflectance_TrueColor/);
+  assert.match(selected.url, /TIME=2024-06-12/);
+  assert.equal(selected.fallbacks.length, 0, 'an explicitly requested date should never be replaced silently');
+  assert.equal(pointImage('earth', 0, 0, '2024-02-30').url, null, 'invalid dates must not generate image requests');
+});
+
+test('Moon and Mars imagery use their corresponding NASA Trek planetary mosaic services', () => {
+  const moon = pointImage('moon', -1.25, 23.4);
+  const mars = pointImage('mars', 18.38, -77.5);
+  assert.match(moon.url, /^https:\/\/trek\.nasa\.gov\/tiles\/Moon\/EQ\/LRO_WAC_Mosaic_Global_303ppd_v02\//);
+  assert.match(mars.url, /^https:\/\/trek\.nasa\.gov\/tiles\/Mars\/EQ\/Mars_Viking_MDIM21_ClrMosaic_global_232m\//);
+  assert.doesNotMatch(moon.url, /gibs\.earthdata/);
+  assert.doesNotMatch(mars.url, /gibs\.earthdata/);
+  assert.match(moon.source, /NASA\/JPL Trek/);
+  assert.match(mars.source, /NASA\/JPL Trek/);
+});
+
+test('Jezero coordinates prefer the documented high-resolution NASA mosaic with a global NASA fallback', () => {
+  const jezero = pointImage('mars', 18.4082, 77.6873);
+  const coveredJezero = pointImage('mars', 18.4082, 77.58);
+  assert.match(coveredJezero.url, /JEZ_hirise_soc_006_orthoMosaic_25cm_Eqc_latTs0_lon0_first_dd/);
+  assert.match(coveredJezero.fallback, /Mars_Viking_MDIM21_ClrMosaic_global_232m/);
+  assert.ok(coveredJezero.fallbacks.length > 0, 'a missing close-up tile should retry supported lower zooms');
+  assert.match(jezero.url, /Mars_Viking_MDIM21_ClrMosaic_global_232m/);
+  assert.equal(jezero.fallback, null, 'outside the controlled orthomosaic footprint, use global imagery directly');
+  assert.ok(jezero.fallbacks.length > 0);
+  const outside = pointImage('mars', 0, 0);
+  assert.match(outside.url, /Mars_Viking_MDIM21_ClrMosaic_global_232m/);
+  assert.equal(outside.fallback, null);
+});
 
 const weights = (overrides = {}) => ({
   temp: 50,
@@ -322,6 +380,22 @@ test('a site with no comparable measurements is rejected rather than scored as z
   assert.ok(result.explanation.includes('no comparable measurements'));
 });
 
+test('unlike dryness evidence is excluded from planetary similarity scores', () => {
+  const target = {
+    id: 'mars-point', body: 'mars', conf: 'High',
+    v: { dry: { value: 95, uncertainty: 2, measurementType: 'atmospheric_water_vapour_proxy' } }
+  };
+  const earth = {
+    id: 'earth-point', body: 'earth', conf: 'High',
+    v: { dry: { value: 80, uncertainty: 4, measurementType: 'aridity_proxy' } }
+  };
+  const result = score(target, earth, { dry: 100 });
+  assert.equal(result.parts.find((part) => part.f.k === 'dry').reason, 'incompatible_measurements');
+  assert.deepEqual(result.matchedFeatures, []);
+  assert.equal(result.coverage, 0);
+  assert.equal(result.status, 'no_comparable_features');
+});
+
 test('measurement metadata is preserved for provenance', () => {
   const target = site('target', {
     temp: { value: -60, uncertainty: 2, source: 'MOLA-derived' }
@@ -350,9 +424,9 @@ test('fixed profiles are independent views and use their own weights', () => {
     0.1
   );
 
-  const expectedWater = 100 * (1 - ((ice.d * 1 + dry.d * 0.75) / 1.75));
-  close(result.profiles.water_volatile.score, expectedWater, 0.1);
-  assert.ok(['ok', 'insufficient_coverage'].includes(result.profiles.water_volatile.status));
+  assert.equal(dry.reason, 'incompatible_measurements');
+  close(result.profiles.water_volatile.score, ice.sim, 0.1);
+  assert.ok(['ok', 'insufficient_coverage', 'insufficient_features'].includes(result.profiles.water_volatile.status));
 });
 
 test('a named profile can supply the weights when none are passed', () => {
@@ -640,6 +714,9 @@ test('the committed discovery snapshot satisfies its module contract', () => {
   assert.equal(ANALOGS, DISCOVERY.candidates);
   assert.ok(ANALOGS.length > 0);
   assert.ok(Array.isArray(DISCOVERY.sources) && DISCOVERY.sources.length >= 5);
+  assert.equal(DISCOVERY.shortlist.mode, 'target-independent global land grid');
+  assert.equal(DISCOVERY.grid.stepDegrees, 6);
+  assert.ok(ANALOGS.length > 100, 'Earth candidate pool must extend beyond the old Jezero shortlist');
 
   const ids = new Set();
   for (const candidate of ANALOGS) {
@@ -652,11 +729,32 @@ test('the committed discovery snapshot satisfies its module contract', () => {
     assert.ok(['High', 'Medium', 'Low'].includes(candidate.conf));
     assert.ok(candidate.v.temp && candidate.v.solar && candidate.v.dry);
     assert.ok(Array.isArray(candidate.provenance) && candidate.provenance.length >= 3);
+    assert.ok(candidate.siteContext?.climate?.source?.url, `${candidate.id} climate source`);
+    assert.ok(candidate.siteContext?.climate?.period, `${candidate.id} observation period`);
+    assert.ok(Number.isFinite(candidate.siteContext?.location?.latitude));
     for (const entry of candidate.provenance) {
       assert.ok(entry.source && entry.source.id, `${candidate.id} provenance source`);
       assert.ok(Number.isFinite(entry.value), `${candidate.id} ${entry.key} value`);
     }
   }
+});
+
+test('site details and research paper are built from the selected scored snapshot candidate', () => {
+  const target = TARGETS.find((entry) => entry.id === 'jezero');
+  const result = rankAnalogs(target, ANALOGS, PRESETS[0].w).find((entry) => entry.status === 'ok');
+  assert.ok(result);
+  assert.ok(ANALOGS.includes(result.analog));
+  assert.ok(result.analog.siteContext.climate.source.url);
+  const details = siteDetailHtml(target, result.analog, 'earth', result);
+  const paper = researchPaperHtml(target, result.analog, result);
+  assert.ok(details.includes('Detailed Earth site report'));
+  assert.ok(details.includes(String(result.analog.lat)));
+  assert.ok(details.includes('Aerosol optical depth (AOD_55'));
+  assert.ok(paper.includes(`Similarity ${Math.round(result.total)}%`));
+  assert.ok(paper.includes('NASA/JPL'));
+  assert.ok(paper.includes('NASA GIBS'));
+  assert.ok(paper.includes('Parameter-wise comparison'));
+  assert.ok(paper.includes('References'));
 });
 
 test('every target can be scored against the discovered snapshot', () => {
@@ -670,13 +768,21 @@ test('every target can be scored against the discovered snapshot', () => {
 });
 
 test('display formatting handles real units and missing values', () => {
-  assert.equal(fmt('temp', -183), '−183 °C');
-  assert.equal(fmt('solar', 6.65), '6.7 kWh/m²/day');
+  assert.equal(fmt('temp', -183), '\u2212183 \u00B0C');
+  assert.equal(fmt('solar', 6.65), '6.7 kWh/m\u00B2/day');
   assert.equal(fmt('ice', 80), '80 / 100');
   assert.equal(fmt('ice', null), 'no data');
-  assert.equal(fmtUncertainty('temp', { uncertainty: 18 }), '±18 °C');
-  assert.equal(fmtUncertainty('solar', { uncertainty: 0.6 }), '±0.6 kWh/m²/day');
-  assert.equal(fmtCoords(-20, -70), '20.0°S 70.0°W');
+  assert.equal(fmtUncertainty('temp', { uncertainty: 18 }), '\u00B118 \u00B0C');
+  assert.equal(fmtUncertainty('solar', { uncertainty: 0.6 }), '\u00B10.6 kWh/m\u00B2/day');
+  assert.equal(fmtCoords(-20, -70), '20.0\u00B0S 70.0\u00B0W');
+});
+
+test('visible UI source stays free of common UTF-8 mojibake', () => {
+  const mojibake = /[\u00C2\u00C3\u00CF]|\u00E2[\u0080-\u00BF\u201A\u201E\u2020-\u2022\u2013\u2014\u2122]|\u00EF\u00BF\u00BD/;
+  for (const file of ['../js/ui/compare.js', '../js/ui/report.js', '../js/utils/format.js']) {
+    const source = readFileSync(new URL(file, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, mojibake, `${file} contains malformed UTF-8 display text`);
+  }
 });
 
 /* ------------------------------------------------------------------ */
@@ -875,7 +981,7 @@ test('Earth coordinate scores require current validated NASA POWER observations'
     dataset: 'NASA POWER / MERRA-2',
     retrievedAt: new Date().toISOString(),
     coordinate: { latitude: 12, longitude: 34 },
-    source: { name: 'NASA POWER / MERRA-2 climatology', url: root, reference: ref, observationPeriod: '2001-2025', resolution: 'Approximately 0.5° native model grid; coordinate values are grid-resampled.' },
+    source: { name: 'NASA POWER / MERRA-2 climatology', url: root, reference: ref, observationPeriod: '2001-2020', resolution: 'MERRA-2 meteorology about 0.5 x 0.625 degrees; coordinate values are grid-resampled.' },
     features: {
       temp: measured(18, 'nasa-power-ts', '°C'),
       solar: measured(4.5, 'nasa-power-solar', 'kWh/m²/day'),

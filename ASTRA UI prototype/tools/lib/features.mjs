@@ -66,7 +66,7 @@ export function surfaceTemperature(power) {
     id: 'nasa-power-ts',
     name: 'NASA POWER MERRA-2 Earth skin temperature',
     url: power.url,
-    period: '2001-2025',
+    period: power.source?.period || '2001-2020',
     note: spread == null ? 'Annual mean.' : `Annual mean; monthly spread ${spread.toFixed(1)} °C.`
   }, { measurementType: 'annual_mean_surface_temperature', unit: '°C' });
 }
@@ -81,7 +81,7 @@ export function solarIllumination(power) {
     id: 'nasa-power-solar',
     name: 'NASA POWER all-sky surface shortwave irradiance',
     url: power.url,
-    period: '2001-2025',
+    period: power.source?.period || '2001-2020',
     note: 'Annual mean of monthly means.'
   }, { measurementType: 'annual_mean_surface_shortwave', unit: 'kWh/m²/day' });
 }
@@ -99,7 +99,7 @@ export function dryness(power) {
     id: 'nasa-power-dryness',
     name: 'NASA POWER precipitation + relative humidity',
     url: power.url,
-    period: '2001-2025',
+    period: power.source?.period || '2001-2020',
     note: `P = ${precipMmYear.toFixed(0)} mm/yr; RH = ${rh.toFixed(0)} %.`
   }, { measurementType: 'aridity_proxy', unit: 'index' });
 }
@@ -133,7 +133,7 @@ export function iceEvidence(power) {
     id: 'nasa-power-water',
     name: 'NASA POWER snow depth, frost days and soil wetness',
     url: power.url,
-    period: '2001-2025',
+    period: power.source?.period || '2001-2020',
     note: `${ICE_CLASS_LABELS[evidenceClass]}. Snow ${s.toFixed(1)} cm, frost ${f.toFixed(0)} d/yr, root-zone wetness ${w.toFixed(2)}.`
   }, {
     measurementType: 'water_ice_evidence',

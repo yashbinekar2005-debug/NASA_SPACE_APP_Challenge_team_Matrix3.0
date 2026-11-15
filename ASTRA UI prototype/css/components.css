@@ -13,6 +13,25 @@
 }
 
 .targets{display:flex;flex-direction:column;gap:8px}
+.location-label,.earth-region-step label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin:4px 0 6px}
+.location-search,.region-select{width:100%;background:var(--bg);border:1px solid var(--line-strong);border-radius:8px;padding:9px 10px;color:var(--fg);font:inherit;font-size:13px}
+.location-search:focus,.region-select:focus{outline:2px solid color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:1px}
+.location-status{min-height:2.6em;margin:7px 0;color:var(--faint);font-size:11px;line-height:1.4}
+.planet-location-results{display:grid;gap:6px;max-height:300px;overflow:auto}
+.planet-place{width:100%;display:grid;gap:3px;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--fg)}
+.planet-place:hover,.planet-place:focus-visible{border-color:var(--accent)}
+.planet-place b{font-size:12px;font-weight:600}
+.planet-place span{font-size:10.5px;color:var(--muted)}
+.planet-place-more{width:100%;padding:9px 12px;border:1px solid var(--line-strong);border-radius:8px;background:var(--bg);color:var(--fg);cursor:pointer}
+.planet-place-more:disabled{opacity:.65;cursor:wait}
+.preset-locations{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+.preset-locations summary,.weight-options summary{cursor:pointer;color:var(--muted);font-size:11px}
+.preset-locations[open] .targets{margin-top:8px}
+.earth-region-step{padding-bottom:10px;margin-bottom:10px;border-bottom:1px solid var(--line)}
+.earth-region-step .cap{margin:7px 0 0}
+.weight-options{margin:8px 0 14px;padding:9px 0;border-bottom:1px solid var(--line)}
+.weight-options[open] .presets{margin-top:10px}
+.step-four{margin-top:4px}
 .tg{
   width:100%;
   display:grid;
@@ -88,6 +107,14 @@
 .image-card{min-width:0;margin:0;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
 .image-card img{display:block;width:100%;height:190px;object-fit:cover;background:#080B14}
 .image-card figcaption{padding:8px 10px;color:var(--muted);font-size:11px;line-height:1.45}
+.planet-place.selected{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,var(--card));box-shadow:inset 3px 0 var(--accent)}
+.result-overview{border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--card);font-size:12px;line-height:1.5;color:var(--fg)}
+.analysis-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.analysis-actions button{background:var(--card);border:1px solid var(--line-strong);border-radius:8px;padding:7px 10px;color:var(--fg);font:inherit;font-size:12px}
+.analysis-actions button:disabled{opacity:.45;cursor:not-allowed}
+.compare-image{margin:8px 0 12px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#080B14}
+.compare-image img{display:block;width:100%;height:210px;object-fit:cover}
+.compare-image figcaption{padding:7px 9px;color:var(--muted);font-size:10.5px;line-height:1.4}
 .image-card figcaption b{display:block;color:var(--fg);font-size:12px;margin-bottom:2px}
 @media(max-width:720px){.imagery{grid-template-columns:1fr}.image-card img{height:220px}}
 

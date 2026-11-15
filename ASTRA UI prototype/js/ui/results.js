@@ -3,6 +3,21 @@ import { state, curTarget } from '../core/state.js';
 import { fmtCoords } from '../utils/format.js';
 import { DISCOVERY, FACTORS } from '../data/index.js';
 
+export function earthRegionFor(lat, lon) {
+  if (lat <= -60) return 'Antarctica';
+  if (lat >= -35 && lat <= 37 && lon >= -20 && lon <= 55) return 'Africa';
+  if (lat >= 35 && lat <= 82 && lon >= -25 && lon <= 60) return 'Europe';
+  if (lat >= -10 && lat <= 82 && lon >= 25 && lon <= 180) return 'Asia';
+  if (lat >= 5 && lon >= -170 && lon < -50) return 'North America';
+  if (lat >= -60 && lat <= 15 && lon >= -85 && lon <= -30) return 'South America';
+  if (lat >= -50 && lat <= 0 && lon >= 110 && lon <= 180) return 'Oceania';
+  return 'Other regions';
+}
+
+export function visibleRanked(ranked = state.ranked) {
+  return state.earthRegion === 'all' ? ranked : ranked.filter((entry) => earthRegionFor(entry.analog.lat, entry.analog.lon) === state.earthRegion);
+}
+
 /**
  * Right column: ranked match list and the selected-pair bar.
  * Selection itself is handled in js/main.js.
@@ -42,6 +57,8 @@ function presentCount(target) {
 export function renderResults() {
   const target = curTarget();
   const earthPoint = state.customEarthPoint;
+  const visible = visibleRanked();
+  const selected = visible.find((entry) => entry.analog.id === state.analogId);
   $('#resTitle').textContent = target?.custom
     ? (target.measurementStatus === 'validated' ? 'Closest measured Earth matches' : 'Custom planetary point selected')
     : earthPoint
@@ -65,15 +82,42 @@ export function renderResults() {
           ? `NASA POWER / MERRA-2 ${earthPoint.measurements.source.period} at the selected coordinate; ranking only against the currently selected planetary target and using shared measured parameters.`
           : state.researchError || 'Retrieving coordinate-specific NASA POWER measurements before comparison…'
       : target
-        ? `${n} measured Earth cells from the discovery snapshot (${DISCOVERY.generatedAt || 'date unavailable'}); scores recalculated for this target and current weights.`
+        ? `${n} candidate cells from a global ${DISCOVERY.grid.stepDegrees}° land grid (${DISCOVERY.generatedAt || 'date unavailable'}); scores recalculated for this target and current weights. This is a regional screening grid, not every named Earth site.`
         : 'Select a measured target on the left or its pin, or click a coordinate on either globe.';
+    if (state.earthRegion !== 'all' && target && state.ranked.length) {
+      meta.textContent = visible.length
+        ? `${visible.length} measured Earth match${visible.length === 1 ? '' : 'es'} in ${state.earthRegion}; ranked from the available discovered cells using current weights.`
+        : `No measured Earth matches in ${state.earthRegion}. Choose another region or All Earth regions.`;
+    }
+    if (meta && DISCOVERY.unavailableDatasets?.length) {
+      const errors = DISCOVERY.unavailableDatasets.map((item) => `${item.name || item.id}: ${item.count} unavailable`).join('; ');
+      meta.textContent += ` Source failures or coverage gaps were recorded and affected cells/features are excluded: ${errors}.`;
+    }
   }
 
-  $('#resultList').innerHTML = target && (!target.custom || target.measurementStatus === 'validated') ? state.ranked.slice(0, 6).map((r, i) => {
+  const overview = $('#resOverview');
+  if (overview) {
+    const buttonExport = $('#exportAnalysis');
+    const buttonRerun = $('#rerunAnalysis');
+    if (buttonExport) buttonExport.disabled = !selected || !target;
+    if (buttonRerun) buttonRerun.disabled = !target;
+    if (!target) overview.textContent = 'Choose a planetary target or select a coordinate to calculate a current comparison.';
+    else if (target.custom && target.measurementStatus === 'loading') overview.textContent = 'Retrieving measurements for the selected coordinate. A score will appear only after the source data passes validation.';
+    else if (target.custom && target.measurementStatus !== 'validated') overview.textContent = state.researchError || 'No validated measurement set is available for this coordinate.';
+    else if (!selected) overview.textContent = state.earthRegion === 'all' ? 'No scientifically supportable candidate regions were identified from the currently available datasets.' : `No measured candidates are available in ${state.earthRegion}.`;
+    else {
+      const measured = selected.parts.filter((part) => part.valid && !part.na).sort((a, b) => b.sim - a.sim);
+      const closest = measured[0];
+      const weakest = measured[measured.length - 1];
+      overview.textContent = `${Math.round(selected.total)}% similarity · ${Math.round(selected.coverage * 100)}% data coverage · ${Math.round(selected.confidence)}% confidence. ${closest ? `Closest factor: ${closest.f.label} (${Math.round(closest.sim)}%).` : 'No shared factors.'} ${weakest && weakest !== closest ? `Largest gap: ${weakest.f.label} (${Math.round(weakest.sim)}%).` : ''}`;
+    }
+  }
+
+  $('#resultList').innerHTML = target && (!target.custom || target.measurementStatus === 'validated') ? visible.slice(0, 6).map((r, i) => {
     const coverage = Math.round((r.coverage ?? 0) * 100);
     const confidence = Math.round(r.confidence ?? 0);
     const provisional = r.status && r.status !== 'ok' ? ' · provisional' : '';
-    const coords = fmtCoords(r.analog.lat, r.analog.lon);
+    const coords = fmtCoords(r.analog.lat, r.analog.lon, r.analog.custom ? 5 : 1);
     const metaBits = [coords, `coverage ${coverage}%`, `confidence ${confidence}%`].filter(Boolean);
     return (
       `<li><button type="button" class="res" data-id="${r.analog.id}" aria-current="${r.analog.id === state.analogId}" ` +
@@ -90,7 +134,7 @@ export function renderResults() {
 
 export function updatePair() {
   const t = curTarget();
-  const r = state.ranked.find((x) => x.analog.id === state.analogId);
+  const r = visibleRanked().find((x) => x.analog.id === state.analogId);
   if (!r || !t) {
     $('#pairNames').textContent = t?.custom
       ? `${t.name} · ${t.measurementStatus === 'loading' ? 'retrieving planetary data…' : 'planetary data unavailable'}`

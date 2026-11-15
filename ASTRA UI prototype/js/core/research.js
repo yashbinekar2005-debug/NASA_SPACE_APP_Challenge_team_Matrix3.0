@@ -159,7 +159,7 @@ export function rankMeasuredPoint(target, candidates, weights) {
   const fresh = present.every((key) => target.v?.[key]?.value === values[key].value);
   if (!fresh) return [];
 
-  return rankAnalogs(target, candidates, weights).filter((result) => result.matchedFeatures.length > 0);
+  return rankAnalogs(target, candidates, weights).filter(isSupportableMeasuredResult);
 }
 
 /** Validate an Earth POWER point against its current coordinate and source metadata. */
@@ -171,7 +171,7 @@ export function validateEarthPointResponse(payload, lat, lon) {
     source?.name === 'NASA POWER / MERRA-2 climatology' &&
     source?.url === 'https://power.larc.nasa.gov/' &&
     /^https:\/\/power\.larc\.nasa\.gov\/api\/temporal\/climatology\/point\?/.test(source?.reference || '') &&
-    source?.observationPeriod === '2001-2025' &&
+    source?.observationPeriod === '2001-2020' &&
     typeof source?.resolution === 'string' && /0\.5/.test(source.resolution) &&
     validDate(payload?.retrievedAt);
   const coordinateOk = Number.isFinite(lat) && Number.isFinite(lon) &&
@@ -213,7 +213,7 @@ export function rankMeasuredEarthPoint(target, point, weights) {
     if (!validation.valid || target.measurementStatus !== 'validated' ||
       Math.abs(target.measurements.lat - target.lat) > 1e-6 || Math.abs(target.measurements.lon - target.lon) > 1e-6) return [];
   }
-  return rankAnalogs(target, [point], weights).filter((result) => result.matchedFeatures.length > 0);
+  return rankAnalogs(target, [point], weights).filter(isSupportableMeasuredResult);
 }
 
 /* ------------------------------------------------------------------ */
@@ -258,7 +258,16 @@ export function rankMeasuredMarsPoint(target, candidates, weights) {
   if (!validateMarsPointResponse(target.measurements).valid) return [];
   const currentValues = target.measurements.values;
   if (target.v?.temp?.value !== currentValues.temp.value || target.v?.solar?.value !== currentValues.solar.value) return [];
-  return rankAnalogs(target, candidates, weights).filter((result) => result.matchedFeatures.length > 0);
+  return rankAnalogs(target, candidates, weights).filter(isSupportableMeasuredResult);
+}
+
+// Live coordinate probes have fewer products than the full factor model. Keep
+// a clearly marked provisional nearest match when at least one validated,
+// comparable measurement exists. Coverage and status remain visible so a
+// one-factor result cannot be mistaken for a complete comparison.
+function isSupportableMeasuredResult(result) {
+  return result.matchedFeatures.length >= 1 &&
+    ['ok', 'insufficient_coverage', 'insufficient_features'].includes(result.status);
 }
 
 function validDate(value) {

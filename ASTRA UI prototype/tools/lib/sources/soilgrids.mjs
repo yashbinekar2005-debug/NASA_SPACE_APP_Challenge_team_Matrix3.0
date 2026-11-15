@@ -33,12 +33,12 @@ export function soilGridsUrl(lat, lon) {
 
 export async function fetchSoilGrids(lat, lon, { refresh = false } = {}) {
   const url = soilGridsUrl(lat, lon);
-  await throttle();
   const response = await fetchCached(url, {
     namespace: 'soilgrids',
     refresh,
     timeout: 45000,
-    retries: 2
+    retries: 2,
+    beforeFetch: throttle
   });
   const layers = response.body?.properties?.layers;
   if (!Array.isArray(layers)) return null;

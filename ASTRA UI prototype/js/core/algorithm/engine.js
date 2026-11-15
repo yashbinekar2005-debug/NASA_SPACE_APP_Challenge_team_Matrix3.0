@@ -350,6 +350,7 @@ function buildPart({
   const capabilityKnown = isFiniteNumber(targetMeasurement.value);
   const hasTarget = targetMeasurement.valid;
   const hasCandidate = candidateMeasurement.valid;
+  const compatible = compatibleMeasurements(feature.k, targetMeasurement, candidateMeasurement);
   const evidenceComparable = !isCapability &&
     feature.evidenceType === 'proxy' &&
     comparableEvidence(targetMeasurement, candidateMeasurement);
@@ -370,12 +371,19 @@ function buildPart({
   let distance = null;
   let note = feature.comparabilityNote ?? null;
 
+  if (!isCapability && hasTarget && hasCandidate && !compatible.ok) {
+    reason = 'incompatible_measurements';
+    note = compatible.note;
+  }
+
   if (applicable) {
     if (isCapability) {
       distance = capabilityDistance(
         candidateMeasurement.value,
         feature.scale ?? 100
       );
+    } else if (!compatible.ok) {
+      // Keep the requested weight in coverage, but exclude it from the score.
     } else if (evidenceComparable) {
       distance = evidenceClassDistance(
         targetMeasurement.evidenceClass,
@@ -383,13 +391,13 @@ function buildPart({
         3
       );
       note = 'Compared as ordered evidence classes (0 none … 3 strong), not as a water fraction.';
-    } else if (hasTarget && hasCandidate) {
+    } else if (hasTarget && hasCandidate && compatible.ok) {
       distance = featureDistance(feature, targetMeasurement, candidateMeasurement);
     }
   }
 
   const valid = applicable && distance != null;
-  if (applicable && !valid) {
+  if (applicable && !valid && compatible.ok) {
     reason = 'missing_data';
     if (!hasTarget && !hasCandidate) {
       note = 'No target or candidate measurement was available for this feature.';
@@ -427,6 +435,28 @@ function buildPart({
     targetRaw: targetMeasurement.raw,
     candidateRaw: candidateMeasurement.raw
   };
+}
+
+// Index values are not interchangeable just because both are scaled 0–100.
+// In particular, atmospheric water vapour, vacuum, and Earth precipitation / RH
+// are different observations. Direct continuous quantities remain comparable
+// through the factor's documented caveats and common units.
+function compatibleMeasurements(key, target, candidate) {
+  if (!target.valid || !candidate.valid) return { ok: true };
+  if (['temp', 'solar'].includes(key)) return { ok: true };
+  const targetType = target.measurementType;
+  const candidateType = candidate.measurementType;
+  // Untyped numeric values are supported by the pure mathematical API and the
+  // legacy fixtures. Research entry points validate provenance before scoring;
+  // whenever measurement types are supplied, they must agree exactly.
+  if (!targetType || !candidateType) return { ok: true };
+  if (targetType !== candidateType) {
+    return {
+      ok: false,
+      note: `Excluded: incompatible evidence types (${targetType || 'unspecified'} vs ${candidateType || 'unspecified'}).`
+    };
+  }
+  return { ok: true };
 }
 
 function computeProfiles(parts, target, analog, { minCoverage, minFeatures }) {

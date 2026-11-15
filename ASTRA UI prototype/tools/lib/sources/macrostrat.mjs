@@ -9,8 +9,7 @@ const throttle = createThrottle(400);
 
 export async function fetchGeology(lat, lon, { refresh = false } = {}) {
   const url = `https://macrostrat.org/api/geologic_units/map?lat=${lat}&lng=${lon}&format=json`;
-  await throttle();
-  const response = await fetchCached(url, { namespace: 'macrostrat', refresh, timeout: 60000 });
+  const response = await fetchCached(url, { namespace: 'macrostrat', refresh, timeout: 60000, beforeFetch: throttle });
   const data = response.body?.success?.data;
   if (!Array.isArray(data) || !data.length) return null;
 
