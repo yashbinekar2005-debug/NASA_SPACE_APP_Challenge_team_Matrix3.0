@@ -10,9 +10,19 @@ The project uses scientific datasets collected from NASA APIs, the Planetary Dat
 
 By analyzing regional characteristics such as elevation, terrain roughness, slope, surface temperature, water availability, ice indicators, and mineral composition, the system calculates similarity scores and identifies potential Earth analog locations.
 
-The ultimate goal is to help researchers, scientists, and space exploration teams identify suitable terrestrial environments for planetary research, astronaut training, habitat testing, and rover experiments.
+The ultimate goal is to help researchers, scientists, and space exploration teams identify suitable terrestrial environments for planetary research, astronaut training, habitat 
+testing, and rover experiments.
+
+### AI Usage Disclosure
+
+- OpenAI Codex: Used for UI development, code debugging, and data optimization.
+
+- OpenCode: Used for developing and refining the platform's core algorithms.
+
+AI tools were used to assist development and improve efficiency. The overall project concept, integration, and implementation were guided by the development team.
 
 ---
+
 
 ## 🎯 Project Objectives
 
