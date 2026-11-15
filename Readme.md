@@ -1,74 +1,104 @@
 # ASTRA: Earth Analog Finder
 
-ASTRA helps you explore how selected places on the Moon or Mars compare with places on Earth. Choose a published planetary target or click a coordinate on a globe, then review the measurements, image sources, and similarity results together.
+ASTRA compares a selected Moon or Mars location with measured Earth data. It shows the measurements used, where they came from, how much evidence is available, and the limits of each comparison. A similarity score is a screening aid; it does not mean two locations are identical.
 
-## What you can do
+## Start ASTRA
 
-- Select a Moon or Mars target, or probe a coordinate directly on the globe.
-- Compare supported measurements such as temperature, sunlight, terrain, geology, soil, and water or ice evidence.
-- Adjust factor weights and see the Earth ranking update.
-- Review the score breakdown, data coverage, uncertainty, sources, and environmental differences that Earth cannot reproduce.
-- View NASA imagery for both selected locations. Earth imagery uses NASA GIBS; if the latest image has no visible coverage, ASTRA checks recent dates and labels the capture it displays. Moon and Mars imagery uses NASA/JPL Trek mosaics.
-- Open the detailed site report or export the comparison as a PDF.
+Requirements: Node.js 18 or newer. The project does not require an npm install or build step.
 
-## Start the app
-
-You need Node.js 18 or newer. No package installation or build step is required.
-
-From this folder, run:
+From the `ASTRA UI prototype` folder, run:
 
 ```sh
 node tools/serve.mjs
 ```
 
-Then open [http://localhost:4173](http://localhost:4173). To use a different port, set the `PORT` environment variable before starting the server.
+Open [http://localhost:4173](http://localhost:4173). Set `PORT` before starting if you need a different port. Live coordinate probes and API routes require the Node server; a static web host alone cannot run them.
 
-The server supports live coordinate probes and the app's data routes. A static host can display the front end and its committed Earth discovery snapshot, but it cannot provide those live server routes by itself.
+## Data sources and URLs
 
-## API keys and tokens
+The app retrieves data from public scientific services. The URLs below are the source pages or API endpoints used by the code. Some services provide point samples or map products, not a fresh measurement at every possible coordinate.
 
-Most connected sources are public and do not need an API key. In particular, NASA POWER is keyless; setting `NASA_POWER_API_KEY` does not change its requests or improve its results. The app requests POWER's 2001-2020 climatology.
+### Earth measurements and candidate discovery
 
-Two optional settings are documented in [.env.example](.env.example):
+| Dataset | What ASTRA uses it for | Source / API URL | Credentials |
+| --- | --- | --- | --- |
+| NASA POWER | Long-term climate and environmental values, including surface/air temperature, precipitation, humidity, sunlight, soil wetness, snow, wind, pressure, and aerosol optical depth. The climatology request covers 2001-2020. | [POWER API](https://power.larc.nasa.gov/api/temporal/climatology/point) · [POWER documentation](https://power.larc.nasa.gov/) | No key. `NASA_POWER_API_KEY` is not used and will not improve results. |
+| ISRIC SoilGrids 2.0 | Topsoil properties (clay, sand, silt, organic carbon, bulk density, coarse fragments), queried at 0-5 cm depth. The mapped product is 250 m resolution. | [Point query API](https://rest.isric.org/soilgrids/v2.0/properties/query) · [SoilGrids](https://soilgrids.org/) | No key. |
+| NASA SRTM through OpenTopoData | Elevation samples used to estimate local relief and terrain roughness. SRTM coverage is limited near the poles. | [SRTM 90 m API](https://api.opentopodata.org/v1/srtm90m) · [OpenTopoData](https://www.opentopodata.org/) | Public service works without a key. `OPEN_TOPO_DATA_API_KEY` is optional and is sent as a Bearer token. |
+| Macrostrat | Mapped bedrock/geologic units, lithology, and age. Map scale varies by place. | [Geologic units API](https://macrostrat.org/api/geologic_units/map) · [Macrostrat](https://macrostrat.org/) | No key. |
+| OpenStreetMap Overpass | Mapped cave entrances as an incomplete capability proxy. No mapped entrance does not prove that no cave exists. | [Overpass API](https://overpass-api.de/api/interpreter) · [OpenStreetMap](https://www.openstreetmap.org/) | No API key. `OVERPASS_URL` can select another Overpass endpoint. Set `ASTRA_CONTACT_EMAIL` to a real contact address for automated requests. |
+| BigDataCloud reverse geocoding | Adds human-readable labels (locality, country, region) to coordinates. It does not affect the similarity score. | [Reverse geocoding API](https://api.bigdatacloud.net/data/reverse-geocode-client) · [BigDataCloud](https://www.bigdatacloud.com/) | No key. |
 
-- `NASA_EARTHDATA_TOKEN` lets the server check whether an Earthdata Login token is valid at `/api/auth/status`. It is not needed for NASA POWER.
-- `OPEN_TOPO_DATA_API_KEY` can be used for OpenTopoData requests when regenerating the Earth discovery data.
-
-Keep credentials in the root `.env` file. Do not commit that file or paste credential values into the README.
-
-## How the comparisons work
-
-Earth candidates are screening-grid cells from the committed discovery snapshot in `js/data/discovered.js`. The snapshot is generated from NASA POWER climate data, SRTM elevation, SoilGrids soil data, and Macrostrat geology. To fetch and rebuild the snapshot, run:
+Earth discovery evaluates a sampled grid and stores its generated candidate snapshot in `ASTRA UI prototype/js/data/discovered.js`. It is not a live measurement of every point on Earth. Regenerate the snapshot from the project folder with:
 
 ```sh
 node tools/discover.mjs
 ```
 
-When you click a planetary coordinate, the server requests coordinate-specific products where available. Moon probes use sources such as LRO LOLA and Diviner and Kaguya MI. Mars probes use MOLA, USGS SIM3292 geology, and the Mars Climate Database. The app identifies modelled climatology and proxy values as such in the results.
+### Moon and Mars coordinate data
 
-A similarity score is calculated from the selected weights and valid, comparable measurements. Missing or incompatible measurements are excluded rather than treated as zero. The results show coverage and uncertainty alongside the score, and explain important differences such as lunar gravity, vacuum, and radiation that an Earth location cannot match.
+| Body / dataset | What ASTRA uses it for | Source |
+| --- | --- | --- |
+| Moon: NASA Lunar Reconnaissance Orbiter (LRO) LOLA global DEM | Elevation and local relief from the mapped topography product (256 pixels per degree; about 118 m at the equator). | [NASA Moon Trek](https://trek.nasa.gov/moon/) |
+| Moon: LRO Diviner | Annual-average surface temperature by local solar hour. | [Diviner science](https://www.diviner.ucla.edu/science) |
+| Moon: Kaguya Multiband Imager (MI) FeO map | Iron-oxide abundance used as a labeled composition proxy, not a direct soil-mechanics measurement. Its mapped coverage is limited by the product. | [NASA Moon Trek](https://trek.nasa.gov/moon/) |
+| Moon: NASA Moon Fact Sheet | Reference values for the solar constant and negligible atmosphere; solar illumination is a geometric estimate. | [NASA Moon Fact Sheet](https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html) |
+| Mars: NASA Mars Trek / Mars Global Surveyor MOLA DEM | Elevation and local relief from the mapped topography product. | [NASA Mars Trek](https://trek.nasa.gov/mars/) |
+| Mars: USGS SIM 3292 global geologic map | Mapped geology; any common-scale soil/geology value derived from a map unit is explicitly a proxy. | [NASA Mars Trek](https://trek.nasa.gov/mars/) · [USGS publication](https://pubs.usgs.gov/sim/3292/) |
+| Mars: Mars Climate Database (MCD) v6.2 | Modelled Martian climate, including temperature and seasonal atmospheric/volatile fields. This is model output, not an in-situ reading at the selected point. | [MCD access and documentation](https://www-mars.lmd.jussieu.fr/mars/access) |
+| Moon/Mars: USGS/IAU Gazetteer of Planetary Nomenclature | Official named-feature coordinates used by the location search. | [Gazetteer downloads](https://planetarynames.wr.usgs.gov/GIS_Downloads) |
 
-The Earth candidate snapshot is a sampled search grid, not a measurement at every point on Earth. Satellite coverage, product resolution, observation dates, and model periods vary by dataset. A matching score is a research aid, not proof that two environments are identical.
+The server calls NASA Trek map services for coordinate-specific Moon/Mars samples and the MCD point service at `https://www-mars.lmd.jussieu.fr/mcd_python/cgi-bin/mcdcgi.py`. If a source has no valid value for a point, ASTRA marks that parameter unavailable instead of inventing a measurement.
 
-## Run the tests
+### Satellite imagery
 
-Run the project's Node test suite with:
+| Location | Imagery source | What to expect |
+| --- | --- | --- |
+| Earth | [NASA GIBS WMS](https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi), using MODIS Terra true-color (and selectable Aqua imagery). | Daily satellite composites. The dashboard can search recent dates when the newest date has no usable coverage; the displayed capture date is shown. Clouds, resolution, and local coverage vary. |
+| Moon | [NASA/JPL Trek](https://trek.nasa.gov/moon/), LRO WAC global mosaic tiles. | Orbital mosaic imagery; not a same-day photograph. Detail and coverage depend on the selected location and map zoom. |
+| Mars | [NASA/JPL Trek](https://trek.nasa.gov/mars/), Viking global color mosaic and available higher-resolution products in their coverage areas. | Orbital mosaic imagery; resolution and availability differ across Mars. A global mosaic may be shown when no higher-resolution image covers the selected point. |
+
+NASA imagery and map products do not require an ASTRA API key. If the image provider has no coverage, the app should report that instead of presenting an unrelated location as the selected site's image.
+
+## API keys and tokens
+
+Copy `.env.example` to `.env` in the project folder and fill only values you actually have. Keep `.env` private and do not paste credential values into this README or commit them.
+
+| Setting | Required? | How ASTRA uses it |
+| --- | --- | --- |
+| `NASA_EARTHDATA_TOKEN` | Optional | Checked by `/api/auth/status` using a minimal NASA Common Metadata Repository (CMR) GraphQL request. This validates the token; it is not currently used to fetch POWER measurements or the imagery listed above. |
+| `OPEN_TOPO_DATA_API_KEY` | Optional | Sent to OpenTopoData as `Authorization: Bearer ...`; can raise service limits. |
+| `NASA_POWER_API_KEY` | Not applicable | NASA POWER is public/keyless. This setting is not read by ASTRA. |
+| `OPEN_METEO_API_KEY` | Not currently used | Reserved in the example configuration; the current project uses no Open-Meteo API request. |
+| `ASTRA_CONTACT_EMAIL` | Recommended for automated runs | Contact value in requests to OpenStreetMap/Overpass; it is not a credential. |
+| `OVERPASS_URL` | Optional | Lets you select another Overpass API endpoint. |
+
+Earthdata token validation is implemented in `ASTRA UI prototype/tools/serve.mjs` at `/api/auth/status`. The token remains on the server and is not sent to the browser. Do not put a token in client-side JavaScript.
+
+## How ASTRA calculates a match
+
+ASTRA compares only measurements with compatible meanings and units. Selected factor weights determine each factor's contribution. Missing measurements are excluded, not treated as zero; the score is shown with data coverage and uncertainty so a high score with limited evidence is visible as such. Planetary gravity, vacuum, radiation, and other cross-body differences cannot be recreated at an Earth site and are called out as limitations.
+
+The Earth candidate list is a screening grid derived from retrieved datasets, not a complete survey of every coordinate on Earth. Resolution, observation period, uncertainty, and coverage differ by source. See [`docs/algorithm.md`](ASTRA%20UI%20prototype/docs/algorithm.md) and [`docs/data_dictionary.md`](ASTRA%20UI%20prototype/docs/data_dictionary.md) for the scoring and field definitions.
+
+## Tests
+
+From the `ASTRA UI prototype` folder, run:
 
 ```sh
 node --test tests/algorithm.test.mjs
 ```
 
-The tests cover scoring and ranking, measurement validation, imagery request construction, coordinate probes, and display formatting.
+## Useful code locations
 
-## Where to look in the code
-
-- `index.html` and `css/`: page structure and styles
-- `js/main.js`: app interactions and dashboard rendering
-- `js/core/algorithm/`: similarity scoring, confidence, and uncertainty
-- `js/core/imagery.js`: NASA image requests and date handling
-- `js/data/targets.js` and `js/data/discovered.js`: planetary targets and Earth candidate snapshot
-- `tools/serve.mjs`: local server and live API routes
-- `tools/lib/planetary-probe.mjs`: Moon and Mars coordinate measurements
-- `tools/discover.mjs`: Earth candidate snapshot generation
-- `tests/algorithm.test.mjs`: automated tests
-- `docs/algorithm.md` and `docs/data_dictionary.md`: scoring details and data definitions
+- `ASTRA UI prototype/js/main.js` - dashboard interactions and fresh-search handling
+- `ASTRA UI prototype/js/core/imagery.js` - Earth, Moon, and Mars image requests
+- `ASTRA UI prototype/js/core/scoring.js` and `ASTRA UI prototype/js/core/research.js` - comparison and research calculations
+- `ASTRA UI prototype/js/data/targets.js` - planetary target data
+- `ASTRA UI prototype/js/data/discovered.js` - generated Earth candidate snapshot
+- `ASTRA UI prototype/tools/serve.mjs` - local server, planetary location search, live probe routes, Earthdata token validation
+- `ASTRA UI prototype/tools/lib/planetary-probe.mjs` - live Moon/Mars coordinate measurements
+- `ASTRA UI prototype/tools/lib/sources/` - Earth data source clients
+- `ASTRA UI prototype/tools/discover.mjs` - Earth candidate grid discovery and snapshot generation
+- `ASTRA UI prototype/.env.example` - documented environment settings (contains no real credentials)
+- `ASTRA UI prototype/tests/algorithm.test.mjs` - automated tests
