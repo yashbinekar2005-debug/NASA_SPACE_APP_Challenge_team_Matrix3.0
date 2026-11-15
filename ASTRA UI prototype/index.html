@@ -15,8 +15,37 @@
   <!-- Theme tokens, base styles and components are imported from here. -->
   <link rel="stylesheet" href="css/index.css">
 </head>
-<body>
-  <div id="app" class="wrap mode-moon">
+<body class="landing-active">
+  <section id="landing-screen" class="landing-screen" aria-label="ASTRA welcome screen">
+    <img class="landing-art" src="assets/landing-background.jpeg" alt="">
+    <h1 class="visually-hidden">ASTRA - Planetary Analog Discovery System</h1>
+    <span class="landing-logo-mask" aria-hidden="true"></span>
+    <span class="landing-prompt-mask" aria-hidden="true"></span>
+    <button class="landing-logo-button" type="button" aria-label="Open the ASTRA dashboard from the logo">
+      <svg class="landing-brand-mark" viewBox="0 0 280 240" aria-hidden="true">
+        <defs>
+          <linearGradient id="astra-mark-fill" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset=".58" stop-color="#c9dcff"/>
+            <stop offset="1" stop-color="#668cff"/>
+          </linearGradient>
+          <filter id="astra-mark-glow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="7" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <path d="M140 54 185 176h-27l-18-48-18 48H95z M140 94l11 29h-22z" fill="url(#astra-mark-fill)" fill-rule="evenodd" filter="url(#astra-mark-glow)"/>
+        <g class="landing-logo-orbit">
+          <ellipse cx="140" cy="120" rx="127" ry="34" fill="none" stroke="#70a2ff" stroke-width="2" opacity=".84"/>
+          <circle cx="259" cy="101" r="8" fill="#9bd5ff" filter="url(#astra-mark-glow)"/>
+        </g>
+        <ellipse cx="140" cy="120" rx="103" ry="73" fill="none" stroke="#426dff" stroke-width="1.4" opacity=".38"/>
+      </svg>
+    </button>
+    <button class="landing-next" type="button">Click the ASTRA logo to continue</button>
+  </section>
+
+  <div id="app" class="wrap mode-moon" hidden>
     <header class="top">
       <div class="brand">
         <svg width="38" height="38" viewBox="0 0 38 38" aria-hidden="true">

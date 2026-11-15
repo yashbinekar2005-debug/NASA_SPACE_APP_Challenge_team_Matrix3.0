@@ -14,6 +14,20 @@ import {
 import { setView, initViews, refreshCompare } from './ui/views.js';
 import { drawTerrains, resizeTerrains } from './ui/compare.js';
 
+const landingScreen = $('#landing-screen');
+landingScreen?.addEventListener('click', (event) => {
+  if (!event.target.closest('button') || landingScreen.classList.contains('is-launching')) return;
+  landingScreen.classList.add('is-launching');
+  landingScreen.querySelectorAll('button').forEach((button) => { button.disabled = true; });
+  const delay = matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 440;
+  window.setTimeout(() => {
+    landingScreen.hidden = true;
+    document.body.classList.remove('landing-active');
+    $('#app').hidden = false;
+    requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  }, delay);
+});
+
 /**
  * Controller for Analog Finder.
  *
